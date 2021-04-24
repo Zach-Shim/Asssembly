@@ -1,0 +1,27 @@
+00001000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 4/19/2021 1:13:08 PM
+
+00001000                             1          ORG $1000
+00001000                             2  MAIN    
+00001000                             3      
+00001000                             4          *NOP
+00001000  4E71                       5          NOP
+00001002                             6      
+00001002                             7          *MOVE
+00001002  1200                       8          MOVE.B  D0,D1
+00001004                             9  
+00001004  FFFF FFFF                 10          SIMHALT             ; halt simulator
+00001008                            11  
+00001008                            12  * Enf of program
+00001008  FFFF FFFF                 13          SIMHALT
+0000100C                            14          END    MAIN        ; last line of source
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+MAIN                1000

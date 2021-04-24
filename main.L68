@@ -1,0 +1,153 @@
+0000015E Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 4/23/2021 4:59:10 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      :DASM
+00000000                             3  * Written by :Lucas Buckeye, Brendan Hurt, Zach Shim
+00000000                             4  * Date       :4.19.21
+00000000                             5  * Description:v1.0
+00000000                             6  *-----------------------------------------------------------
+00000000                             7  
+00000000                             8  *-----------------------------------------------------------
+00000000                             9  * Directives:
+00000000                            10  *-----------------------------------------------------------
+00000100                            11              ORG     $100
+00000100                            12  
+00000100  =0000000D                 13  CR          EQU     $0D             ; Define Carriage Return and Line Feed
+00000100  =0000000A                 14  LF          EQU     $0A 
+00000100                            15  
+00000100= 50 6C 65 61 73 65 ...     16  startMsg:   DC.B    'Please enter a starting address ', 0, CR, LF
+00000123= 50 6C 65 61 73 65 ...     17  endMsg:     DC.B    'Please enter an ending address ', 0, CR, LF
+00000145                            18  
+00000145= 49 6E 76 61 6C 69 ...     19  badInput    DC.B    'Invalid Input ', 0, CR, LF
+00000156                            20  
+00000156                            21  startAddr   DS.L    1
+0000015A                            22  endAddr     DS.L    1
+0000015E                            23  
+0000015E                            24  *-----------------------------------------------------------
+0000015E                            25  * Macros:
+0000015E                            26  *-----------------------------------------------------------
+0000015E                            27  
+0000015E                            28  PRINT_MSG:      MACRO 
+0000015E                            29                  CLR.L   D0
+0000015E                            30                  LEA     \1, A1      ; \1 acts as a parameter
+0000015E                            31                  MOVE.B  #14, D0     
+0000015E                            32                  TRAP    #15
+0000015E                            33                  ENDM
+0000015E                            34  
+0000015E                            35  GET_INPUT:      MACRO
+0000015E                            36                  CLR D0
+0000015E                            37                  MOVE.B      #2, D0
+0000015E                            38                  TRAP        #15
+0000015E                            39                  ;JSR        parseInput
+0000015E                            40                  ENDM
+0000015E                            41  
+0000015E                            42  *----------------------Get Starting Address-------------------
+0000015E                            43  MAIN:
+0000015E  4280                      44              CLR.L   D0
+00000160  43F8 0100                 45              LEA     startMsg, A1      
+00000164  103C 000E                 46              MOVE.B  #14, D0     
+00000168  4E4F                      47              TRAP    #15
+0000016A                            48  
+0000016A  43F8 0156                 49              LEA.L   startAddr, A1
+0000016E  103C 0002                 50              MOVE.B  #2, D0
+00000172  4E4F                      51              TRAP    #15
+00000174  6000 001C                 52              BRA     VALIDATE_INPUT
+00000178                            53  
+00000178                            54  *----------------------Get Ending Address----------------------
+00000178                            55  
+00000178  4280                      56              CLR.L   D0
+0000017A  43F8 0123                 57              LEA     endMsg, A1      
+0000017E  103C 000E                 58              MOVE.B  #14, D0     
+00000182  4E4F                      59              TRAP    #15
+00000184                            60  
+00000184  43F8 015A                 61              LEA.L   endAddr, A1
+00000188  103C 0002                 62              MOVE.B  #2, D0
+0000018C  4E4F                      63              TRAP    #15
+0000018E  6000 0002                 64              BRA     VALIDATE_INPUT 
+00000192                            65  
+00000192                            66  *----------------------VALIDATE INPUT---------------------------      
+00000192                            67  
+00000192                            68  VALIDATE_INPUT:                 
+00000192  B23C 0004                 69              CMP.B      #4, D1               ; for task 2, length of string is in D1                
+00000196  6700 001C                 70              BEQ        CONVERT_TO_HEX 
+0000019A  B23C 0008                 71              CMP.B      #8, D1               ; address can either be 4 or 8 bits in length  
+0000019E  6700 0014                 72              BEQ        CONVERT_TO_HEX
+000001A2  6000 0002                 73              BRA        INVALID_INPUT
+000001A6                            74  
+000001A6                            75  INVALID_INPUT:  
+000001A6                            76m             PRINT_MSG  badInput
+000001B2  60AA                      77              BRA        MAIN
+000001B4                            78  
+000001B4                            79  
+000001B4                            80  *----------------CONVERT FROM ASCII TO HEX------------------
+000001B4                            81  CONVERT_TO_HEX:
+000001B4  0C11 0030                 82              CMP.B      #$30, (A1)           ; check if input is a number (lower range) - check ascii table for reference
+000001B8  6DEC                      83              BLT        INVALID_INPUT        
+000001BA                            84  
+000001BA  0C11 003A                 85              CMP.B      #$3A,(A1)            ; check if input is a number (upper range)
+000001BE  6D00 0012                 86              BLT        NUM_TO_HEX      
+000001C2                            87  
+000001C2  0C11 0041                 88              CMP.B      #$41, (A1)           ; check if input is a letter (lower range)
+000001C6  6DDE                      89              BLT        INVALID_INPUT             
+000001C8                            90  
+000001C8  0C11 0047                 91              CMP.B      #$47,(A1)            ; check if input is a number (upper range)
+000001CC  6D00 000C                 92              BLT        LETTER_TO_HEX
+000001D0                            93  
+000001D0  60D4                      94              BRA        INVALID_INPUT    
+000001D2                            95  
+000001D2                            96  NUM_TO_HEX:      
+000001D2  0411 0030                 97              SUB.B      #$30, (A1)           ; subtract 30 to get a number 
+000001D6  6000 000A                 98              BRA        STORE_INPUT   
+000001DA                            99  
+000001DA                           100  LETTER_TO_HEX:     
+000001DA  0411 0037                101              SUB.B      #$37, (A1)             ; subtract 37 to get a letter
+000001DE  6000 0002                102              BRA        STORE_INPUT
+000001E2                           103  
+000001E2                           104  STORE_INPUT:       
+000001E2  D619                     105              ADD.B     (A1)+, D3            ; keep hex stored in D3           
+000001E4  6000 0002                106              BRA        ITERATE                 
+000001E8                           107  
+000001E8                           108  ITERATE:
+000001E8  5301                     109              SUB.B      #$1, D1
+000001EA  B23C 0000                110              CMP.B      #0, D1
+000001EE  6700 0006                111              BEQ        DONE
+000001F2                           112  
+000001F2  E98B                     113              LSL.L      #4, D3               ; shift D3 contents left by 4 to receive next input
+000001F4  60BE                     114              BRA        CONVERT_TO_HEX
+000001F6                           115  
+000001F6                           116  *----------------CONVERT FROM ASCII TO HEX------------------
+000001F6                           117  DONE:
+000001F6  4281                     118              CLR.L   D1
+000001F8  2203                     119              MOVE.L  D3, D1   
+000001FA  103C 0003                120              MOVE.B  #3, D0     
+000001FE  4E4F                     121              TRAP    #15
+00000200                           122  
+00000200                           123              END        MAIN        ; last line of source
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+BADINPUT            145
+CONVERT_TO_HEX      1B4
+CR                  D
+DONE                1F6
+ENDADDR             15A
+ENDMSG              123
+GET_INPUT           B3
+INVALID_INPUT       1A6
+ITERATE             1E8
+LETTER_TO_HEX       1DA
+LF                  A
+MAIN                15E
+NUM_TO_HEX          1D2
+PRINT_MSG           0
+STARTADDR           156
+STARTMSG            100
+STORE_INPUT         1E2
+VALIDATE_INPUT      192
