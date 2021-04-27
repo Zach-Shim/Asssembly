@@ -298,12 +298,12 @@ BAD_OPCODE:
 
 GRAB_NEXT_WORD:
             * load current word of bits into opcode
-            MOVEA.W (A2)+, opcode           
+            MOVE.W (A2)+, opcode
 
-            * load into A2 register for printing
-            LEA.L   A2, A4
-            LEA     startAddr, A1
-            MOVE.B  #' ', A1
+            * load into A4 register for printing
+            LEA.L   (A2), (A4)+
+            MOVE.B  #' ', (A4)+
+            LEA.L   (A2), (A4)+
 
 GRAB_FIRST_FOUR_BITS:
             * find first four bits of opcode
@@ -319,7 +319,7 @@ GRAB_FIRST_FOUR_BITS:
 
 *-----------------------------------------------------------
 * First four bits = 0100
-* (CLR,NEG,NOT,MOVEM,SWAP,JMP,JSR,NOP,RTS,LEA) 
+* (NOP, NOT, MOVEM, JSR, RTS, LEA) 
 *-----------------------------------------------------------
 opc_0100:
             
@@ -334,18 +334,16 @@ opc_0100:
 *-----------------------------------------------------------
 opc_1101:
             * fill in A1 register
-            MOVE.B  #'A',(A2)+          * Put ADD into Buff
-            MOVE.B  #'D',(A2)+
-            MOVE.B  #'D',(A2)+
-            MOVE.B  #'.',(A2)+
+            MOVE.B  #'A',(A4)+          * Put ADD into Buff
+            MOVE.B  #'D',(A4)+
+            MOVE.B  #'D',(A4)+
+            MOVE.B  #'.',(A4)+
 
             BSR     GET_SIZE  
+            JSR     SIZE_TO_BUFFER
             BSR     EA_TO_DN            ; boolean value (either <ea> -> Dn or Dn -> <ea>)  
-            CMP     #1, D4
+            JSR     EA_TO_BUFFER
 
-
-            BRS     GRAB_NEXT_WORD
-            BSR     PRINT_OPCODE        
             BSR     LOAD_ADDRESSES
             
 
@@ -411,6 +409,26 @@ LONG_TO_BUFFER:
 STB_END:
             RTS                         
 
+*-----------------------EA TO BUFFER------------------------
+* evaluates the size of an opcode and adds it to A1 to be printed out
+* Registers:
+*   D2 = destination for shifts
+*   D3 = size of opcode
+*-----------------------------------------------------------
+EA_TO_BUFFER:
+            CLR.L   D2
+            MOVE.B  D3, D2               ; move size of opcode to be manipulated
+            BSR     EA_TO_BUFFER_LOOP
+
+EA_TO_BUFFER_LOOP:
+            CMP.B   #0, D2
+            BEQ     RTS
+            JSR     GRAB_NEXT_WORD
+            SUB.B   #1, D2
+
+EA_TO_BUFFER_END:
+            RTS
+
 
 *-------------------------DONE-------------------------------
 DONE:
@@ -420,4 +438,4 @@ DONE:
             TRAP      #15
             CLR_A_REG D0, A1
 
-            END       MAIN        ; last line of source
+            END       MAIN              ; last line of source
