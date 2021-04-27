@@ -256,7 +256,7 @@ LOAD_ADDRESSES:
             BSR     GRAB_NEXT_WORD
             BSR     GRAB_FIRST_FOUR_BITS    ; grabs that opcode's ID (first four bits)
 
-            MOVEM.L D0-D7/A0-A6,-(SP)       ; move the old registers onto the stack
+            MOVEM.L D0-D7/A1/A3,-(SP)       ; move the old registers onto the stack
             BRA     FIND_OPCODE
 
 *-------------------IDENTIFY OPCODES------------------------
@@ -274,7 +274,7 @@ IDENTIFY_OPCODE:
             BRA     FIND_OPCODE
 
 RESTORE_REGS:
-            MOVEM.L (SP)+, D0-D7/A0-A6      ; move the old registers onto the stack
+            MOVEM.L (SP)+, D0-D7/A1/A3      ; move the old registers onto the stack
             RTS
 
 PRINT_OPCODE:
