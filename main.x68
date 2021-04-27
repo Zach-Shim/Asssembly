@@ -19,40 +19,78 @@ testMsg:    DC.B    'value: ', 0, CR, LF
 
 badInput    DC.B    'Invalid Input', 0, CR, LF
 
+userAddr    DS.L    1
 startAddr   DS.L    1
+;startSize   DS.B    1
 endAddr     DS.L    1
+;endSize     DS.B    1
 
 *-----------------------------------------------------------
 * Macros:
 *-----------------------------------------------------------
 
-PRINT_MSG:      MACRO 
-                CLR.L   D0
-                LEA     \1, A1      ; \1 acts as a parameter
-                MOVE.B  #14, D0     
-                TRAP    #15
-                ENDM
+PRINT_MSG:  MACRO 
+            CLR.L   D0
+            LEA     \1, A1      ; \1 acts as a parameter
+            MOVE.B  #14, D0     
+            TRAP    #15
+            ENDM
 
-GET_INPUT:      MACRO
-                CLR D0
-                MOVE.B      #2, D0
-                TRAP        #15
-                ENDM
+CLR_D_REGS: MACRO
+            CLR.L   D0
+            CLR.L   D1
+            CLR.L   D2
+            CLR.L   D3
+            CLR.L   D4
+            CLR.L   D5
+            CLR.L   D6
+            CLR.L   D7
+            ENDM
 
-*----------------------Get Starting Address-------------------
+CLR_A_REG: MACRO
+            CLR.L   \1
+            MOVE.L  \1, \2
+            ENDM  
+
+
+*-----------------------------------------------------------
+* Description:  Get User Input
+*-----------------------------------------------------------
+
+*-------------------------MAIN------------------------------
 MAIN:
-            BRA     GET_START_ADDRESS
+            BSR     GET_INPUT
+            JMP     IDENTIFY_OPCODE
+*-----------------------------------------------------------
 
+TEST:
+
+
+
+
+*-------------------------Get Input-------------------------
+GET_INPUT:
+            CMP      #0, D4
+            BEQ      GET_START_ADDRESS
+               
+            MOVE.L   D6, startAddr
+            MOVE.L   D7, endAddr
+            RTS 
+*-----------------------------------------------------------
+
+*----------------------Get Starting Address----------------------
 GET_START_ADDRESS:
             CLR.L   D0
             LEA     startMsg, A1      
             MOVE.B  #14, D0     
             TRAP    #15
 
-            LEA.L   startAddr, A1
+            LEA.L   userAddr, A1
             MOVE.B  #2, D0
             TRAP    #15
+            ;MOVE.B  D1, startSize
             BRA     VALIDATE_INPUT
+*-----------------------------------------------------------
 
 *----------------------Get Ending Address----------------------
 GET_END_ADDRESS:
@@ -61,11 +99,26 @@ GET_END_ADDRESS:
             MOVE.B  #14, D0     
             TRAP    #15
 
-            LEA.L   endAddr, A1
+            LEA.L   userAddr, A1
             MOVE.B  #2, D0
             TRAP    #15
+            ;MOVE.B  D1, endSize
             BRA     CHECK_LENGTH
+*-----------------------------------------------------------
 
+
+
+
+
+*-----------------------------------------------------------
+* Description:  Validate User Input
+* Constraints:  
+*   User input must be:
+*   Length 4 or Length 8
+*   ASCII character 0-9 or A-F
+*   Starting and ending address with value < $00FFFFFF 
+*   Starting address is before ending address
+*-----------------------------------------------------------
 
 *----------------------VALIDATE INPUT---------------------------      
 
@@ -74,7 +127,7 @@ VALIDATE_INPUT:
             BEQ        CHECK_LENGTH         ; if equal, parse START address 
             CMP.B      #1, D4               ; D4 = 1 if start has been parsed but not end address
             BEQ        GET_END_ADDRESS      ; if equal, parse ENDING address  
-            BRA        IDENTIFY_OPCODE      ; done parsing, D4 = 2
+            BRA        GET_INPUT            ; done parsing, D4 = 2
 
 CHECK_LENGTH:
             CMP.B      #4, D1               ; for task 2, length of string is in D1                
@@ -84,9 +137,14 @@ CHECK_LENGTH:
             BRA        INVALID_INPUT
 
 INVALID_INPUT:  
+            CLR.L      D3
             PRINT_MSG  badInput
+            CMP.B      #0, D4 
+            BEQ        GET_START_ADDRESS  
+            CMP.B      #1, D4               ; D4 = 1 if start has been parsed but not end address
+            BEQ        GET_END_ADDRESS      ; if equal, parse ENDING address  
             BRA        MAIN
-
+*-----------------------------------------------------------
 
 *----------------CONVERT FROM ASCII TO HEX------------------
 CONVERT_TO_HEX:
@@ -129,10 +187,10 @@ STORE_INPUT:
             BEQ        STORE_START          ; if equal, parse START address 
             
             CMP.B      #1, D4               ; D4 = 1 if start has been parsed but not end address
-            BNE        STORE_END         
+            BEQ        STORE_END         
 
 STORE_START:
-            MOVE.L     D3, startAddr
+            MOVE.L     D3, D6
             ADD.B      #1, D4               ; value to indicate if we are done parsing
             ;CLR        D3
             ;BRA       VALIDATE_INPUT       ; UNCOMMENT WHEN TAKING OUT TEST CODE BELOW
@@ -147,7 +205,7 @@ STORE_START:
             BRA         VALIDATE_INPUT
 
 STORE_END:
-            MOVE.L     D3, endAddr
+            MOVE.L     D3, D7
             ADD.B      #1, D4               ; value to indicate if we are done parsing
             ;CLR        D3
             ;BRA       VALIDATE_INPUT       ; UNCOMMENT WHEN TAKING OUT TEST CODE BELOW
@@ -160,11 +218,93 @@ STORE_END:
 
             CLR         D3
             BRA         VALIDATE_INPUT
+*-----------------------------------------------------------
 
 
-*-------------------IDENTIFY OPCODES--------------------
+
+
+
+*-----------------------------------------------------------
+* Description:  IDENTIFY OPCODES LOOP
+* Constraints:  
+
+*-----------------------------------------------------------
+
+*-------------------IDENTIFY OPCODES------------------------
 
 IDENTIFY_OPCODE:
+            CLR_D_REGS
+            CLR_A_REG   D0, A1
+            MOVEM.L     D0-D7/A0-A6,-(SP)    ; move the old registers onto the stack
+
+            MOVEA.L     startAddr, A1
+            MOVEA.L     endAddr, A2
+
+            MOVE.W      (A1), D1
+            MOVE.B      #12, D0
+            LSR.L       D0, D1 
+
+FIND_OPCODE:
+            CMP.B       D0, %0100
+            JMP         opc_0100
+            CMP.B       D0, %1101
+            JMP         opc_1101
+*-----------------------------------------------------------
+
+*-----------------------------------------------------------
+* First four bits = 0100
+* (CLR,NEG,NOT,MOVEM,SWAP,JMP,JSR,NOP,RTS,LEA) 
+*-----------------------------------------------------------
+opc_0100:
+            
+*-----------------------------------------------------------
+
+*-----------------------------------------------------------
+* First four bits = 1101
+* (ADD,ADDA)
+*-----------------------------------------------------------
+opc_1101:
+            MOVE.L      
+            JSR         getSize             * return size  in 6 & 7 into D6
+            CMP.B   #%11,D6             * determine if a ADD or ADDA
+            BNE     opADD               * not size 11, then skip to ADD
+            MOVE.B  #'A',(A2)+          * yep, detected 11 then ADDA
+            MOVE.B  #'.',(A2)+
+            MOVE.W  D7,D6               * fresh copy of instruction
+            LSR.L   #shift8,D6          * shift to right to isolate 8th bits
+            ANDI.W  #$0001,D6           * Isolate last bit for size
+            CMP.B   #%1,D6              * compare for a 1 to determine
+            BEQ     addaL               * jump to long, else word
+            MOVE.B  #'W',(A2)+          * add word size into buffer
+            JMP     opADDA
+            
+opADD       MOVE.B  #'.',(A2)+          * finish putting Add.x to buffer
+            JSR     size2Buffer         * Determine Size and Add to Buffer
+            MOVE.B  #' ',(A2)+
+            MOVE.B  #' ',(A2)+
+            MOVE.B  #' ',(A2)+
+            MOVE.B  #' ',(A2)+
+            JSR     getDirBit           * get Direction Bit 0 = EA 1 =regs
+            CMP.B   #%0,D6              * is this EA first?
+            BNE     opADD01             * no, jmp to reg mode first
+            JSR     getEA               * print off effective address
+            MOVE.B  #',',(A2)+          * add comma
+            MOVE.B  #'D',(A2)+          * add register BAM!
+            JSR     highRegBits         * Add register number to buffer
+            JMP     end1101             * jump to exit of sub: hex1_1101
+            
+opADD01     MOVE.B  #'D',(A2)+          * start register entry
+            JSR     highRegBits         * add register number
+            MOVE.B  #',',(A2)+          * add comma
+            JSR     getEA               * finish with EA 
+
+getSize     
+            MOVE.W      D7,D6               * copy current instruction to shift
+            LSR.W       #6,D6               * move the size bits in 6-7 to LSB
+            ANDI.W      #$0003,D6           * remove other non-size bits and store result into D6
+            RTS
+*-----------------------------------------------------------
+
 
 
 *----------------CONVERT FROM ASCII TO HEX------------------
