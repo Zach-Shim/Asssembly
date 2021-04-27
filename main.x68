@@ -257,7 +257,7 @@ LOAD_ADDRESSES:
             BSR     GRAB_FIRST_FOUR_BITS    ; grabs that opcode's ID (first four bits)
 
             MOVEM.L D0-D7/A0-A6,-(SP)       ; move the old registers onto the stack
-            FIND_OPCODE
+            BRA     FIND_OPCODE
 
 *-------------------IDENTIFY OPCODES------------------------
 * evaluates an opcode based on first four bits (aka opTag)
@@ -284,10 +284,10 @@ PRINT_OPCODE:
             CLR_A_REG D0, A1
 
 FIND_OPCODE:
-            CMP.B   D0, #%0100
+            CMP.B   #%0000100, D0 
             JMP     opc_0100
 
-            CMP.B   D0, #%1101
+            CMP.B   #%00001101, D0
             JMP     opc_1101
 
             * error, bad opcode
@@ -301,9 +301,9 @@ GRAB_NEXT_WORD:
             MOVE.W (A2)+, opcode
 
             * load into A4 register for printing
-            LEA.L   (A2), (A4)+
+            MOVE.L   opcode, (A4)+
             MOVE.B  #' ', (A4)+
-            LEA.L   (A2), (A4)+
+            MOVE.L   opcode, (A4)+
 
 GRAB_FIRST_FOUR_BITS:
             * find first four bits of opcode
@@ -422,7 +422,7 @@ EA_TO_BUFFER:
 
 EA_TO_BUFFER_LOOP:
             CMP.B   #0, D2
-            BEQ     RTS
+            BEQ     EA_TO_BUFFER_END
             JSR     GRAB_NEXT_WORD
             SUB.B   #1, D2
 
