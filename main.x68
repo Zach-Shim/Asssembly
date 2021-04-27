@@ -8,22 +8,25 @@
 *-----------------------------------------------------------
 * Directives:
 *-----------------------------------------------------------
-            ORG     $100
+            ORG     $1000
 
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
 LF          EQU     $0A 
 
 startMsg:   DC.B    'Please enter a starting address ', 0, CR, LF
 endMsg:     DC.B    'Please enter an ending address ', 0, CR, LF
-testMsg:    DC.B    'value: ', 0, CR, LF
+doneMsg:    DC.B    'exiting...', 0, CR, LF
+badInput:   DC.B    'Invalid Input', 0, CR, LF
 
-badInput    DC.B    'Invalid Input', 0, CR, LF
+userAddr:   DS.L    1
+startAddr:  DS.L    1
+endAddr:    DS.L    1
 
-userAddr    DS.L    1
-startAddr   DS.L    1
-;startSize   DS.B    1
-endAddr     DS.L    1
-;endSize     DS.B    1
+opOutput:   DS.L    5
+
+opcode:     DS.W    1   
+opTag:      DS.B    1               ; a four bit identifier for opcodes (first four bits of an instruction, ex. 1011 = ADD)
+valid:      DS.B    1
 
 *-----------------------------------------------------------
 * Macros:
@@ -63,11 +66,6 @@ MAIN:
             JMP     IDENTIFY_OPCODE
 *-----------------------------------------------------------
 
-TEST:
-
-
-
-
 *-------------------------Get Input-------------------------
 GET_INPUT:
             CMP      #0, D4
@@ -81,7 +79,7 @@ GET_INPUT:
 *----------------------Get Starting Address----------------------
 GET_START_ADDRESS:
             CLR.L   D0
-            LEA     startMsg, A1      
+            LEA.L   startMsg, A1      
             MOVE.B  #14, D0     
             TRAP    #15
 
@@ -95,7 +93,7 @@ GET_START_ADDRESS:
 *----------------------Get Ending Address----------------------
 GET_END_ADDRESS:
             CLR.L   D0
-            LEA     endMsg, A1      
+            LEA.L   endMsg, A1      
             MOVE.B  #14, D0     
             TRAP    #15
 
@@ -226,30 +224,98 @@ STORE_END:
 
 *-----------------------------------------------------------
 * Description:  IDENTIFY OPCODES LOOP
-* Constraints:  
+* Registers:
+*   D0 = used for tasks and trap #15
+*   D1 = size of shifting bits
+*   D2 = destination for shifts
+*   D3 = size of opcode
+*   D4 = <ea> vs Dn (0 = <ea>, 1 = Dn)
+*   D5 = addressing mode
+*   D6 = register number
+*   D7 = used as bool flag
+*   A1 = used for task 14 (printing out strings to screen) and trap #15
+*   A2 = current address (given by user)
+*   A3 = ending address (given by user)
+*   A4 = used to add to the buffer to print ()
 
 *-----------------------------------------------------------
+
+
+*---------------------LOAD ADDRESSES------------------------
+* stores initial values into registers
+*-----------------------------------------------------------
+LOAD_ADDRESSES: 
+            * clear all registers and push current registers onto the stack (so we can have fresh registers)
+            CLR_D_REGS
+            CLR_A_REG       D0, A1
+
+            * load start and end registers
+            MOVEA.L startAddr, A2
+            MOVEA.L endAddr, A3
+
+            BSR     GRAB_NEXT_WORD
+            BSR     GRAB_FIRST_FOUR_BITS    ; grabs that opcode's ID (first four bits)
+
+            MOVEM.L D0-D7/A0-A6,-(SP)       ; move the old registers onto the stack
+            FIND_OPCODE
 
 *-------------------IDENTIFY OPCODES------------------------
-
+* evaluates an opcode based on first four bits (aka opTag)
+*-----------------------------------------------------------
 IDENTIFY_OPCODE:
-            CLR_D_REGS
-            CLR_A_REG   D0, A1
-            MOVEM.L     D0-D7/A0-A6,-(SP)    ; move the old registers onto the stack
+            CMPA.L  A2, A3
+            BEQ     DONE
 
-            MOVEA.L     startAddr, A1
-            MOVEA.L     endAddr, A2
+            BSR     RESTORE_REGS
+            BSR     PRINT_OPCODE
 
-            MOVE.W      (A1), D1
-            MOVE.B      #12, D0
-            LSR.L       D0, D1 
+            BSR     GRAB_NEXT_WORD
+            BSR     GRAB_FIRST_FOUR_BITS    ; grabs that opcode's ID (first four bits)
+            BRA     FIND_OPCODE
+
+RESTORE_REGS:
+            MOVEM.L (SP)+, D0-D7/A0-A6      ; move the old registers onto the stack
+            RTS
+
+PRINT_OPCODE:
+            CLR.L     D0
+            MOVE.B    #14, D0
+            TRAP      #15
+            CLR_A_REG D0, A1
 
 FIND_OPCODE:
-            CMP.B       D0, %0100
-            JMP         opc_0100
-            CMP.B       D0, %1101
-            JMP         opc_1101
+            CMP.B   D0, #%0100
+            JMP     opc_0100
+
+            CMP.B   D0, #%1101
+            JMP     opc_1101
+
+            * error, bad opcode
+            BRA      BAD_OPCODE
+
+BAD_OPCODE:
+            JMP      DONE
+
+GRAB_NEXT_WORD:
+            * load current word of bits into opcode
+            MOVEA.W (A2)+, opcode           
+
+            * load into A2 register for printing
+            LEA.L   A2, A4
+            LEA     startAddr, A1
+            MOVE.B  #' ', A1
+
+GRAB_FIRST_FOUR_BITS:
+            * find first four bits of opcode
+            MOVE.B  opcode, D2
+            MOVE.B  #12, D1
+            LSR.L   D1, D2
+            MOVE.B  D2, opTag
+            RTS
+
 *-----------------------------------------------------------
+
+
 
 *-----------------------------------------------------------
 * First four bits = 0100
@@ -259,23 +325,99 @@ opc_0100:
             
 *-----------------------------------------------------------
 
+
+
+
 *-----------------------------------------------------------
 * First four bits = 1101
 * (ADD,ADDA)
 *-----------------------------------------------------------
 opc_1101:
-            MOVE.L      
-            JSR     getSize             * return size  in 6 & 7 into D6
+            * fill in A1 register
+            MOVE.B  #'A',(A2)+          * Put ADD into Buff
+            MOVE.B  #'D',(A2)+
+            MOVE.B  #'D',(A2)+
+            MOVE.B  #'.',(A2)+
+
+            BSR     GET_SIZE  
+            BSR     EA_TO_DN            ; boolean value (either <ea> -> Dn or Dn -> <ea>)  
+            CMP     #1, D4
+
+
+            BRS     GRAB_NEXT_WORD
+            BSR     PRINT_OPCODE        
+            BSR     LOAD_ADDRESSES
             
-getSize     
-            MOVE.W      D7,D6               * copy current instruction to shift
-            LSR.W       #6,D6               * move the size bits in 6-7 to LSB
-            ANDI.W      #$0003,D6           * remove other non-size bits and store result into D6
+
+GET_SIZE:
+            CLR.L   D2
+            MOVE.W  opcode ,D2          ; copy current instruction to shift
+            
+            * shift left to get rid of opTag
+            MOVE.B  #7, D1
+            LSL.W   D1, D2
+
+            * shift right to get rid of opmode, mode, and register bits
+            MOVE.B  #13, D1
+            LSR.W   D1, D2
+
+            * store in appropriate register
+            MOVE.B  D2, D3
+            RTS
+
+EA_TO_DN:
+            * D3 should hold the size of the opcode operation
+            CLR.L   D2
+            MOVE.W  D3, D2  
+
+            * shift left to identify
+            MOVE.B  #2, D1
+            LSR.W   D1, D2
+            
+            * store in appropriate register
+            MOVE.B  D2, D4
             RTS
 *-----------------------------------------------------------
 
 
+*---------------------SIZE TO BUFFER------------------------
+* evaluates the size of an opcode and adds it to A1 to be printed out
+*-----------------------------------------------------------
+SIZE_TO_BUFFER: 
+            CMP.B   #%00,D3            
+            BEQ     BYTE_TO_BUFFER              
 
-*----------------CONVERT FROM ASCII TO HEX------------------
+            CMP.B   #%01,D6             * is this a word?
+            BEQ     WORD_TO_BUFFER
+
+            CMP.B   #%10,D6             * is this a long?
+            BEQ     LONG_TO_BUFFER             
+      
+            
+            JMP     BAD_OPCODE  
+            
+BYTE_TO_BUFFER:
+            MOVE.B  #'B', (A1)           * add B to buffer
+            BRA     STB_END             
+            
+WORD_TO_BUFFER:
+            MOVE.B  #'W', (A1)          * add W to buffer
+            BRA     STB_END             
+
+LONG_TO_BUFFER:
+            MOVE.B  #'L',(A2)+          * add L to buffer
+            BRA     STB_END             
+
+STB_END:
+            RTS                         
+
+
+*-------------------------DONE-------------------------------
 DONE:
-            END        MAIN        ; last line of source
+            CLR.L     D0
+            MOVE.B    #14, D0
+            LEA.L     doneMsg, A1
+            TRAP      #15
+            CLR_A_REG D0, A1
+
+            END       MAIN        ; last line of source
