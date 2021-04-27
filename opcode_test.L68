@@ -1,6 +1,6 @@
 00007000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/26/2021 9:08:03 PM
+Created On: 4/27/2021 2:40:35 PM
 
 00000000                             1  
 00000000                             2  *-----------------------------------------------------------
@@ -12,8 +12,8 @@ Created On: 4/26/2021 9:08:03 PM
 00000000                             8  
 00007000                             9          ORG     $7000
 00007000                            10  MAIN:
-00007000  5201                      11          ADD.B   #1, D1
-00007002  D401                      12          ADD.B   D1, D2
+00007000  D401                      11          ADD.B   D1, D2
+00007002  5201                      12          ADD.B   #1, D1
 00007004  D538 0010                 13          ADD.B   D2, $10
 00007008                            14  DONE:
 00007008  FFFF FFFF                 15          SIMHALT             ; halt simulator

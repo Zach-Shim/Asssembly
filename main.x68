@@ -22,7 +22,7 @@ userAddr:   DS.L    1
 startAddr:  DS.L    1
 endAddr:    DS.L    1
 
-opOutput:   DS.L    5
+opOutput:   DS.L    2
 
 opcode:     DS.W    1   
 opTag:      DS.B    1               ; a four bit identifier for opcodes (first four bits of an instruction, ex. 1011 = ADD)
@@ -50,11 +50,21 @@ CLR_D_REGS: MACRO
             CLR.L   D7
             ENDM
 
-CLR_A_REG: MACRO
+CLR_A_REG:  MACRO
             CLR.L   \1
             MOVE.L  \1, \2
             ENDM  
 
+
+PRINT_INSTRUCTION:    
+            MACRO
+
+            CLR.L     D0
+            MOVE.B    #14, D0
+            MOVEA.L   \1, A1
+            TRAP      #15
+            CLR_A_REG D0, A1
+            ENDM
 
 *-----------------------------------------------------------
 * Description:  Get User Input
@@ -63,7 +73,7 @@ CLR_A_REG: MACRO
 *-------------------------MAIN------------------------------
 MAIN:
             BSR     GET_INPUT
-            JMP     IDENTIFY_OPCODE
+            BRA     LOAD_ADDRESSES
 *-----------------------------------------------------------
 
 *-------------------------Get Input-------------------------
@@ -232,7 +242,7 @@ STORE_END:
 *   D4 = <ea> vs Dn (0 = <ea>, 1 = Dn)
 *   D5 = addressing mode
 *   D6 = register number
-*   D7 = used as bool flag
+*   D7 = holds addresses (word in length)
 *   A1 = used for task 14 (printing out strings to screen) and trap #15
 *   A2 = current address (given by user)
 *   A3 = ending address (given by user)
@@ -249,14 +259,22 @@ LOAD_ADDRESSES:
             CLR_D_REGS
             CLR_A_REG       D0, A1
 
+            LEA.L   opOutput, A4
+            LEA.L   A4, A1
+            LEA.L   startAddr, A1
+            BRA     PRINT_INSTRUCTION
+
             * load start and end registers
             MOVEA.L startAddr, A2
             MOVEA.L endAddr, A3
 
             BSR     GRAB_NEXT_WORD
-            BSR     GRAB_FIRST_FOUR_BITS    ; grabs that opcode's ID (first four bits)
+            MOVE.L  D7, opcode
+            BRA     PRINT_INSTRUCTION
 
-            MOVEM.L D0-D7/A1/A3,-(SP)       ; move the old registers onto the stack
+            BSR     GRAB_FIRST_FOUR_BITS     ; grabs that opcode's ID (first four bits)
+
+            MOVEM.L D0-D7,-(SP)              ; move the old registers onto the stack
             BRA     FIND_OPCODE
 
 *-------------------IDENTIFY OPCODES------------------------
@@ -267,51 +285,47 @@ IDENTIFY_OPCODE:
             BEQ     DONE
 
             BSR     RESTORE_REGS
-            BSR     PRINT_OPCODE
+            BSR     PRINT_INSTRUCTION     A4, A1
 
             BSR     GRAB_NEXT_WORD
             BSR     GRAB_FIRST_FOUR_BITS    ; grabs that opcode's ID (first four bits)
             BRA     FIND_OPCODE
 
 RESTORE_REGS:
-            MOVEM.L (SP)+, D0-D7/A1/A3      ; move the old registers onto the stack
+            MOVEM.L (SP)+, D0-D7            ; move the old registers onto the stack
             RTS
 
-PRINT_OPCODE:
-            CLR.L     D0
-            MOVE.B    #14, D0
-            TRAP      #15
-            CLR_A_REG D0, A1
-
-FIND_OPCODE:
-            CMP.B   #%0000100, D0 
-            JMP     opc_0100
-
-            CMP.B   #%00001101, D0
-            JMP     opc_1101
-
-            * error, bad opcode
-            BRA      BAD_OPCODE
 
 BAD_OPCODE:
             JMP      DONE
 
 GRAB_NEXT_WORD:
             * load current word of bits into opcode
-            MOVE.W (A2)+, opcode
+            MOVE.W (A2)+, D7
 
             * load into A4 register for printing
-            MOVE.L   opcode, (A4)+
-            MOVE.B  #' ', (A4)+
-            MOVE.L   opcode, (A4)+
+            MOVE.W   D7, (A4)+
+            MOVE.B   #' ', (A4)+
+            RTS
 
 GRAB_FIRST_FOUR_BITS:
             * find first four bits of opcode
-            MOVE.B  opcode, D2
+            MOVE.L  opcode, D2
             MOVE.B  #12, D1
             LSR.L   D1, D2
-            MOVE.B  D2, opTag
+            MOVE.B  D2, D0
+            MOVE.B  D0, opTag
             RTS
+
+FIND_OPCODE:
+            CMP.B   #%0000100, D0 
+            BEQ     opc_0100
+
+            CMP.B   #%00001101, D0
+            BEQ     opc_1101
+
+            * error, bad opcode
+            BRA      BAD_OPCODE
 
 *-----------------------------------------------------------
 
@@ -341,7 +355,7 @@ opc_1101:
 
             BSR     GET_SIZE  
             JSR     SIZE_TO_BUFFER
-            BSR     EA_TO_DN            ; boolean value (either <ea> -> Dn or Dn -> <ea>)  
+            BSR     OPERATION_TYPE      ; boolean value (either <ea> -> Dn or Dn -> <ea>)  
             JSR     EA_TO_BUFFER
 
             BSR     LOAD_ADDRESSES
@@ -363,7 +377,7 @@ GET_SIZE:
             MOVE.B  D2, D3
             RTS
 
-EA_TO_DN:
+OPERATION_TYPE:
             * D3 should hold the size of the opcode operation
             CLR.L   D2
             MOVE.W  D3, D2  
@@ -403,10 +417,11 @@ WORD_TO_BUFFER:
             BRA     STB_END             
 
 LONG_TO_BUFFER:
-            MOVE.B  #'L',(A2)+          * add L to buffer
+            MOVE.B  #'L',(A4)+          * add L to buffer
             BRA     STB_END             
 
 STB_END:
+            MOVE.B  #' ',(A4)+          * add L to buffer
             RTS                         
 
 *-----------------------EA TO BUFFER------------------------
@@ -439,3 +454,8 @@ DONE:
             CLR_A_REG D0, A1
 
             END       MAIN              ; last line of source
+
+*~Font name~Courier New~
+*~Font size~12~
+*~Tab type~1~
+*~Tab size~4~
