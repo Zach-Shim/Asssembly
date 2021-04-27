@@ -265,39 +265,8 @@ opc_0100:
 *-----------------------------------------------------------
 opc_1101:
             MOVE.L      
-            JSR         getSize             * return size  in 6 & 7 into D6
-            CMP.B   #%11,D6             * determine if a ADD or ADDA
-            BNE     opADD               * not size 11, then skip to ADD
-            MOVE.B  #'A',(A2)+          * yep, detected 11 then ADDA
-            MOVE.B  #'.',(A2)+
-            MOVE.W  D7,D6               * fresh copy of instruction
-            LSR.L   #shift8,D6          * shift to right to isolate 8th bits
-            ANDI.W  #$0001,D6           * Isolate last bit for size
-            CMP.B   #%1,D6              * compare for a 1 to determine
-            BEQ     addaL               * jump to long, else word
-            MOVE.B  #'W',(A2)+          * add word size into buffer
-            JMP     opADDA
+            JSR     getSize             * return size  in 6 & 7 into D6
             
-opADD       MOVE.B  #'.',(A2)+          * finish putting Add.x to buffer
-            JSR     size2Buffer         * Determine Size and Add to Buffer
-            MOVE.B  #' ',(A2)+
-            MOVE.B  #' ',(A2)+
-            MOVE.B  #' ',(A2)+
-            MOVE.B  #' ',(A2)+
-            JSR     getDirBit           * get Direction Bit 0 = EA 1 =regs
-            CMP.B   #%0,D6              * is this EA first?
-            BNE     opADD01             * no, jmp to reg mode first
-            JSR     getEA               * print off effective address
-            MOVE.B  #',',(A2)+          * add comma
-            MOVE.B  #'D',(A2)+          * add register BAM!
-            JSR     highRegBits         * Add register number to buffer
-            JMP     end1101             * jump to exit of sub: hex1_1101
-            
-opADD01     MOVE.B  #'D',(A2)+          * start register entry
-            JSR     highRegBits         * add register number
-            MOVE.B  #',',(A2)+          * add comma
-            JSR     getEA               * finish with EA 
-
 getSize     
             MOVE.W      D7,D6               * copy current instruction to shift
             LSR.W       #6,D6               * move the size bits in 6-7 to LSB
