@@ -254,12 +254,8 @@ LOAD_ADDRESSES:
             MOVEA.L startAddr, A2
             MOVEA.L endAddr, A3
 
-            ;MOVEA.L  A2, A1
-            ;MOVE.B   #'D', (A2)+
-
             BSR     GRAB_NEXT_WORD
             MOVE.W  D7, opcode
-            ;BRA    PRINT_INSTRUCTION
 
             BSR     GRAB_FIRST_FOUR_BITS     ; grabs that opcode's ID (first four bits)
 
@@ -274,7 +270,7 @@ IDENTIFY_OPCODE:
             CMPA.L  A2, A3
             BGE     DONE
 
-            ;BSR     RESTORE_REGS
+            ;BSR     RESTORE_REGS           need to fix
             BRA     PRINT_INSTRUCTION
 
             BSR     GRAB_NEXT_WORD
@@ -307,8 +303,6 @@ GRAB_NEXT_WORD:
             MOVE.W (A2)+, D7
 
             * load into A1 register for printing
-            ;MOVE.W   D7, (A1)+
-            ;MOVE.B   #' ', (A1)+
             RTS
 
 GRAB_FIRST_FOUR_BITS:
@@ -662,8 +656,3 @@ DONE:
             CLR_A_REG D0, A1
 
             END       MAIN              ; last line of source
-
-*~Font name~Courier New~
-*~Font size~12~
-*~Tab type~1~
-*~Tab size~4~
