@@ -272,7 +272,7 @@ LOAD_ADDRESSES:
 *-----------------------------------------------------------
 IDENTIFY_OPCODE:
             CMPA.L  A2, A3
-            BEQ     DONE
+            BGE     DONE
 
             ;BSR     RESTORE_REGS
             BRA     PRINT_INSTRUCTION
