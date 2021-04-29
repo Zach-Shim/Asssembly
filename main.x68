@@ -409,6 +409,18 @@ BAD_OPCODE:
 * (NOP, NOT, MOVEM, JSR, RTS, LEA) 
 *-----------------------------------------------------------
 opc_0100:
+
+            ;Check if the opcode is NOP
+            MOVE.W  opcode, D2 ;Copy opcode to D2
+            CMP.W   #$4E71, D2 ;Check if D2 is equal to NOP (0x4E71 in hex)
+            BEQ     opc_nop ;If equal branch to label to handle the opcode NOP
+            CLR.L   D2 ;If instruction is not equal to NOP clear register and continue checks
+
+opc_nop:
+            MOVE.B  #'N',(A1)+ ;Put nop into a1 for printing
+            MOVE.B  #'O',(A1)+ 
+            MOVE.B  #'P',(A1)+ 
+            BRA     IDENTIFY_OPCODE
             
 *-----------------------------------------------------------
 
@@ -804,6 +816,7 @@ DONE:
             CLR_A_REG D0, A1
 
             END       MAIN              ; last line of source
+
 *~Font name~Courier New~
 *~Font size~12~
 *~Tab type~1~
