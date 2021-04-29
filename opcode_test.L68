@@ -1,6 +1,6 @@
 00007000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/27/2021 2:40:35 PM
+Created On: 4/28/2021 6:20:21 PM
 
 00000000                             1  
 00000000                             2  *-----------------------------------------------------------
@@ -13,11 +13,10 @@ Created On: 4/27/2021 2:40:35 PM
 00007000                             9          ORG     $7000
 00007000                            10  MAIN:
 00007000  D401                      11          ADD.B   D1, D2
-00007002  5201                      12          ADD.B   #1, D1
-00007004  D538 0010                 13          ADD.B   D2, $10
-00007008                            14  DONE:
-00007008  FFFF FFFF                 15          SIMHALT             ; halt simulator
-0000700C                            16          END     MAIN        ; last line of source
+00007002                            12  
+00007002                            13  DONE:
+00007002  FFFF FFFF                 14          SIMHALT             ; halt simulator
+00007006                            15          END     MAIN        ; last line of source
 
 No errors detected
 No warnings generated
@@ -26,5 +25,5 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DONE                7008
+DONE                7002
 MAIN                7000
