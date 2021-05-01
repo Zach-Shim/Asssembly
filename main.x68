@@ -13,7 +13,6 @@
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
 LF          EQU     $0A 
 
-
 startMsg:   DC.B    'Please enter a starting address ', CR, LF, 0
 endMsg:     DC.B    'Please enter an ending address ', CR, LF, 0
 doneMsg:    DC.B    'exiting...', CR, LF, 0
@@ -29,6 +28,11 @@ opOutput:   DS.L    2
 opcode:     DS.W    1   
 opTag:      DS.B    1               ; a four bit identifier for opcodes (first four bits of an instruction, ex. 1011 = ADD)
 valid:      DS.B    1
+
+
+
+
+
 
 *-----------------------------------------------------------
 * Macros:
@@ -57,8 +61,17 @@ CLR_A_REG:  MACRO
             MOVE.L  \1, \2
             ENDM              
 
+
+
+
+
+
+
+
+
 *-----------------------------------------------------------
-* Description:  Get User Input
+* Description:  
+* Get User Input
 *-----------------------------------------------------------
 
 *-------------------------MAIN------------------------------
@@ -67,6 +80,24 @@ MAIN:
             BRA     LOAD_ADDRESSES
 *-----------------------------------------------------------
 
+
+
+
+
+
+
+
+
+*-----------------------------------------------------------
+* Description:  
+* Get User Input
+*
+* Registers Used:
+*   D0 = task values
+*   D1 = stores of size of ascii string in A1 from user input
+*   D4 = bool check (0 = starting address, 1 = ending address, 2 = done)
+*   A1 = stores an ascii string from user input
+*-----------------------------------------------------------
 *-------------------------Get Input-------------------------
 GET_INPUT:
             CMP      #0, D4
@@ -77,7 +108,7 @@ GET_INPUT:
             RTS 
 *-----------------------------------------------------------
 
-*----------------------Get Starting Address----------------------
+*----------------------Get Starting Address-----------------
 GET_START_ADDRESS:
             CLR.L   D0
             LEA.L   startMsg, A1      
@@ -91,7 +122,7 @@ GET_START_ADDRESS:
             BRA     VALIDATE_INPUT
 *-----------------------------------------------------------
 
-*----------------------Get Ending Address----------------------
+*----------------------Get Ending Address-------------------
 GET_END_ADDRESS:
             CLR.L   D0
             LEA.L   endMsg, A1      
@@ -109,6 +140,10 @@ GET_END_ADDRESS:
 
 
 
+
+
+
+
 *-----------------------------------------------------------
 * Description:  Validate User Input
 * Constraints:  
@@ -117,6 +152,12 @@ GET_END_ADDRESS:
 *   ASCII character 0-9 or A-F
 *   Starting and ending address with value < $00FFFFFF 
 *   Starting address is before ending address
+*
+* Registers Used:
+*   D0 = task values
+*   D1 = stores of size of ascii string in A1 from user input
+*   D4 = bool check (0 = starting address, 1 = ending address, 2 = done)
+*   A1 = stores an ascii string from user input
 *-----------------------------------------------------------
 
 *----------------------VALIDATE INPUT---------------------------      
@@ -224,8 +265,20 @@ STORE_END:
 
 
 
+
+
+
+
+
+
+
 *--------------------------PRINT----------------------------
-* printing addresses and instructions
+* Description:
+* Prints hex addresses according to where we are in the .S file
+* and source/destination effective addresses
+*
+* No Parameters
+*
 * Registers:
 *   D0 = used for tasks and trap #15
 *   D1 = size of comparison
@@ -235,6 +288,7 @@ STORE_END:
 *   A2 = current address (given by user)
 *-----------------------------------------------------------
 
+*----------------------PRINT_ADDRESS------------------------
 PRINT_ADDRESS:
             * reset A1 to beginning of string
             CLR_D_REGS
@@ -243,26 +297,26 @@ PRINT_ADDRESS:
             * move current address to D2
             MOVE.L    A2, D2
 
-            * if absolute short, print word
+            * if absolute short, print word. Range $0000 - $7FFF and $FFFF8000 - $FFFFFFFF
             MOVE.L    #$8000, D1
             CMP.L     D1, D2
             BLT       PRINT_WORD
             
-            * if absolute long, print long
+            * if absolute long, print long. Range $8000 - $FFFF7FFF
             MOVE.L    #$FFFF8000, D1
             CMP.L     D1, D2
             BGE       PRINT_LONG                 
 
 PRINT_WORD:
             CLR_D_REGS
-            MOVE.B    #1, D1
-            MOVE.W    A2, D7
+            MOVE.B    #1, D1            * passing 1 means we are passing word as a parameter to ASCII_TO_HEX
+            MOVE.W    A2, D7            * passing current parsing position means we are passing an address as a parameter in D7 to ASCII_TO_HEX
             JSR       ASCII_TO_HEX
             BRA       FINISH_PRINT
 
 PRINT_LONG:
             CLR_D_REGS
-            MOVE.B    #3, D1
+            MOVE.B    #3, D1            * passing 1 means we are passing long as a parameter to ASCII_TO_HEX
             MOVE.L    A2, D7
             JSR       ASCII_TO_HEX
             BRA       FINISH_PRINT
@@ -275,7 +329,9 @@ FINISH_PRINT:
             MOVE.B    #14, D0
             TRAP      #15
             RTS
+*-----------------------------------------------------------
 
+*-------------------PRINT_INSTRUCTION-----------------------
 PRINT_INSTRUCTION:    
             * null terminator
             MOVE.B    #00,(A1)              
@@ -298,9 +354,24 @@ DONE_PARSING:
 
 
 
+
+
+
+
+
+
+
 *---------------------LOAD ADDRESSES------------------------
-* stores INITIAL values into registers which is  necessary 
-* to complete before starting identify opcodes loop
+* Description:
+* Stores INITIAL values into appropriate address registers 
+* which is necessary to complete before starting identify opcodes loop
+* Also pushes reigsters onto the stack
+*
+* No Parameters
+*
+* Registers:
+*   A2 = current address (given by user)
+*   A3 = ending address (given by user)
 *-----------------------------------------------------------
 LOAD_ADDRESSES: 
             * reset A1 to beginning of string
@@ -320,7 +391,6 @@ LOAD_ADDRESSES:
             BRA     FIND_OPCODE
 *-----------------------------------------------------------
 
-
 *-----------------------------------------------------------
 * Description:  IDENTIFY OPCODES LOOP
 * Registers:
@@ -336,13 +406,13 @@ LOAD_ADDRESSES:
 *   A2 = current address (given by user)
 *   A3 = ending address (given by user)
 *-----------------------------------------------------------
-
-
 *-------------------IDENTIFY OPCODES------------------------
 * evaluates an opcode based on first four bits (aka opTag)
 * for now only works with one instruction
 *-----------------------------------------------------------
 IDENTIFY_OPCODE:
+
+            * print opcode
             BSR     PRINT_INSTRUCTION
 
             * check to see if we are done (start address >= end address)
@@ -353,17 +423,23 @@ IDENTIFY_OPCODE:
             BSR     PRINT_ADDRESS
             
             ;BSR     RESTORE_REGS           need to fix
+
             CLR_D_REGS
-            BSR     GRAB_NEXT_WORD
-            BSR     GRAB_FIRST_FOUR_BITS    ; grabs that opcode's ID (first four bits)
+            BSR     GRAB_NEXT_WORD          * grab opcode
+            BSR     GRAB_FIRST_FOUR_BITS    * grabs that opcode's ID (first four bits)
            
             BRA     FIND_OPCODE
+*-----------------------------------------------------------
 
+*----------------------RESTORE_REGS--------------------------
+* Description:
+* Move the old registers onto the stack
 RESTORE_REGS:
-            MOVEM.L (SP)+, D0-D7            ; move the old registers onto the stack
+            MOVEM.L (SP)+, D0-D7            
             RTS
+*-----------------------------------------------------------
 
-*---------Useful Subroutine For Identifying Opcodes---------
+*---------Useful Subroutines For Identifying Opcodes--------
 GRAB_NEXT_WORD:
             * load current word of bits into D7
             MOVE.W (A2)+, opcode
@@ -379,26 +455,32 @@ GRAB_FIRST_FOUR_BITS:
             RTS
 *-----------------------------------------------------------
 
+
+
+
+
+
+
+
+
 *----------------------FIND OPCODE--------------------------
-* kind of like a jump table
-* add in the first four bits of your opcode after four 0's to the list
+* Description:
+* Finds a matching opTag (first four bits of opcode) and 
+* jumps to that opcode's encoding subroutine
 *
-* for example:
+* For example:
 *               ADD's first four bits = 1101, so I put
-*               CMP.B #%00001101, D0
+*               CMP.B #%1101, D0
 *
-* notice the first four zeroes before the 1101, because we need to compare a whole byte
-* also note I'm comparing the result with D0, which should hold the first four bits of the opcode
-* which was retrieved in either GRAB_FIRST_FOUR_BITS. Check registers above IDENTIFY_OPCODE for details
-* if you're testing, i suggest going into the opcode_test file and replacing my ADD.B   D1, D2 code with
-* a single line that you need to test, because I havent tested beyond a single command. Feel free to add
-* anything or edit anything if it makes it simpler or less complicated
+* No Parameters
+*
+* No Registers Used
 *-----------------------------------------------------------        
 FIND_OPCODE:
-            CMP.B   #%0100, D0 
+            CMP.B   #%0100, opTag 
             BEQ     opc_0100
 
-            CMP.B   #%1101, D0
+            CMP.B   #%1101, opTag
             BEQ     opc_1101
 
             * error, bad opcode
@@ -406,12 +488,12 @@ FIND_OPCODE:
 
 *-----------------------------------------------------------
 
-
+*-----------------------BAD OPCODE--------------------------
 BAD_OPCODE:
             JMP      DONE
-
-
 *-----------------------------------------------------------
+
+*---------------------------opc_0100------------------------
 * First four bits = 0100
 * (NOP, NOT, MOVEM, JSR, RTS, LEA) 
 *-----------------------------------------------------------
@@ -430,20 +512,22 @@ opc_0100:
             CLR.L   D2 ;If instruction is not equal to NOP clear register and continue checks
 
 opc_nop:
-            MOVE.B  #'N',(A1)+ ;Put nop into a1 for printing
+            * Put NOP into A1 buffer for printing
+            MOVE.B  #'N',(A1)+      
             MOVE.B  #'O',(A1)+ 
             MOVE.B  #'P',(A1)+ 
-            CLR.L   D2  ;Clear the data from d2
+            
             BRA     IDENTIFY_OPCODE
 
 
 opc_not:
-            MOVE.B  #'N',(A1)+ ;Put not into a1 for printing
+            * Put NOT into A1 buffer for printing
+            MOVE.B  #'N',(A1)+ 
             MOVE.B  #'O',(A1)+
             MOVE.B  #'T',(A1)+
             MOVE.B  #'.',(A1)+
             
-            *Calculate Size (.b,.w.l)
+            * Calculate Size (.b,.w.l)
             JSR     GET_NOT_SIZE
             JSR     SIZE_TO_BUFFER 
             JSR     GET_EA_MODE
@@ -466,10 +550,7 @@ GET_NOT_SIZE:
             RTS
 *-----------------------------------------------------------
 
-
-
-
-*-----------------------------------------------------------
+*---------------------------opc_1101------------------------
 * First four bits = 1101
 * (ADD)
 *-----------------------------------------------------------
@@ -560,6 +641,11 @@ GET_DATA_REG_NUM:
 
             RTS
 *-----------------------------------------------------------
+
+
+
+
+
 
 
 
@@ -720,11 +806,11 @@ ea_111:
             LSR.W       D1,D2                   * isolate register bits (last 3)
             ADD.B       #$30,D2                 * convert data register # to ASCII digit
 
-            CMP.B       #%0000,D6              * compare to determine if it's a word
-            BEQ         EA_WORD                * put word address in buffer
+            CMP.B       #%0000,D6               * compare to determine if it's a word
+            BEQ         EA_WORD                 * put word address in buffer
 
-            CMP.B       #%0001,D6              * compare to determine if it's a long
-            BEQ         EA_LONG                * put long address in buffer
+            CMP.B       #%0001,D6               * compare to determine if it's a long
+            BEQ         EA_LONG                 * put long address in buffer
             
             CMP.B       #%0100,D6
             BEQ         PRINT_IMMEDIATE
@@ -752,6 +838,18 @@ GET_EA_DONE:
 INVALID_EA:
             JMP      DONE
 *-----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
 
 *----------------------HEX TO ASCII-------------------------
 * Description:
@@ -822,6 +920,17 @@ ATH_DONE:
             MOVE.B  #' ',(A1)+          * add blank space to buffer
             CLR_D_REGS
             RTS
+*-----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
 
 *---------------------SIZE TO BUFFER------------------------
 * Description:
@@ -870,11 +979,3 @@ DONE:
             CLR_A_REG D0, A1
 
             END       MAIN              ; last line of source
-
-
-
-
-*~Font name~Courier New~
-*~Font size~12~
-*~Tab type~1~
-*~Tab size~4~
