@@ -1,19 +1,24 @@
 
 *-----------------------------------------------------------
-* Title      :nop
+* Title      :Testing File
 * Written by :Lucas Buckeye, Brendan Hurt, Zach Shim
 * Date       :4.19.21
-* Description:v1.1
+* Description:v1.2
 *-----------------------------------------------------------
 
         ORG     $7000
 MAIN:
-    NOP    
-    ;ADD.B   D1, D2
-
+        ADD.L   (A4)+, D6
+        NOT.L   D5
+        NOP    
+        ADD.B   D1, D2
+        NOT.L   D2
 DONE:
 		SIMHALT             ; halt simulator
         END		MAIN        ; last line of source
+
+
+
 
 *~Font name~Courier New~
 *~Font size~12~

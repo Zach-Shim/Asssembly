@@ -1,23 +1,25 @@
 00007000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/29/2021 4:52:36 PM
+Created On: 4/30/2021 4:46:38 PM
 
 00000000                             1  
 00000000                             2  *-----------------------------------------------------------
-00000000                             3  * Title      :nop
+00000000                             3  * Title      :Testing File
 00000000                             4  * Written by :Lucas Buckeye, Brendan Hurt, Zach Shim
 00000000                             5  * Date       :4.19.21
-00000000                             6  * Description:v1.1
+00000000                             6  * Description:v1.2
 00000000                             7  *-----------------------------------------------------------
 00000000                             8  
 00007000                             9          ORG     $7000
 00007000                            10  MAIN:
-00007000  4E71                      11      NOP    
-00007002                            12      ;ADD.B   D1, D2
-00007002                            13  
-00007002                            14  DONE:
-00007002  FFFF FFFF                 15          SIMHALT             ; halt simulator
-00007006                            16          END     MAIN        ; last line of source
+00007000  DC9C                      11          ADD.L   (A4)+, D6
+00007002  4685                      12          NOT.L   D5
+00007004  4E71                      13          NOP    
+00007006  D401                      14          ADD.B   D1, D2
+00007008  4682                      15          NOT.L   D2
+0000700A                            16  DONE:
+0000700A  FFFF FFFF                 17          SIMHALT             ; halt simulator
+0000700E                            18          END     MAIN        ; last line of source
 
 No errors detected
 No warnings generated
@@ -26,5 +28,5 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DONE                7002
+DONE                700A
 MAIN                7000
