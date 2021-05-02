@@ -29,6 +29,7 @@ For example:
 GET_BITS_11_TO_9:
 Would retrieve bits 7-9 in an opcode. For the ADD instruction (and some other instructions), this would help get the register operator bits. Will look further into and discuss at next meeting
 
+Something similar has already been done in GET_EA_MODE, which is a subroutine that parses the last six bits of an opcode for the mode and register of an effective address. I believe most if not all opcodes share those bits in common (in terms of bit order), so that is useful function that we can share.
 
 ## Features:
 <p>
