@@ -23,7 +23,14 @@ I also haven't tested with loading in data from opcode_test with a starting/endi
 And i think that's it for now off the top of my head, let me know if theres anything else breaks and I will try to fix it. Also let me know if something is unclear so I can document it better. Don't be afraid to add helper functions or change my code cause as you guys see its not that great lol. Thanks again <br>
 </p>
 
-## Features
+## Idea:
+Having subroutines dedicated to finding specific bits. Will help modularize/abstract retrieving different bits for different routines.    
+For example:  
+GET_BITS_11_TO_9:
+Would retrieve bits 7-9 in an opcode. For the ADD instruction (and some other instructions), this would help get the register operator bits. Will look further into and discuss at next meeting
+
+
+## Features:
 <p>
 Current Supported Opcodes 
 <ul>
