@@ -8,6 +8,9 @@
 *-----------------------------------------------------------
 * Directives:
 *-----------------------------------------------------------
+            ORG     $7000
+            AND.B   D1, D2
+
             ORG     $1000
 
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
@@ -28,6 +31,8 @@ opOutput:   DS.L    2
 opcode:     DS.W    1   
 opTag:      DS.B    1               ; a four bit identifier for opcodes (first four bits of an instruction, ex. 1011 = ADD)
 valid:      DS.B    1
+
+
 
 *-----------------------------------------------------------
 * Macros:
@@ -320,6 +325,9 @@ GRAB_FIRST_FOUR_BITS:
 FIND_OPCODE:
             CMP.B   #%0000100, D0 
             BEQ     opc_0100
+            
+            CMP.B   #%00001100, D0
+            BEQ     opc_1100
 
             CMP.B   #%00001101, D0
             BEQ     opc_1101
@@ -341,6 +349,79 @@ opc_0100:
 *-----------------------------------------------------------
 
 
+*-----------------------------------------------------------
+* First four bits = 1100
+* (AND, MULS) 
+*-----------------------------------------------------------
+opc_1100:
+            ; determine which optag it should be, use bits 6-8
+                ; bits = 7 (111), then it's MULS
+            BRA     OPC_1100_AND ; just do this for now
+
+;===========================================================
+OPC_1100_AND:   ; AND opcode subroutine
+
+            ;-----------------------------
+            ; fill A1 with the opcode name
+            MOVE.B  #'A',(A1)+
+            MOVE.B  #'N',(A1)+
+            MOVE.B  #'D',(A1)+
+            MOVE.B  #'.',(A1)+
+            
+            ;-----------------------------
+            ; get the register
+                ; do a CMP to see if the register's been set
+            CLR.L   D2
+            MOVE.W  opcode,D2
+            
+            ; shift the optag out
+            MOVE.B  #4,D1
+            LSL.W   D1,D2
+            
+            ; isolate the register
+            MOVE.B  #13,D1
+            LSR.W   D1,D2
+            
+            ; store the register
+            MOVE.L  D1,D6
+            
+
+            ; get the size and the operation type
+            JSR     GET_SIZE
+            JSR     SIZE_TO_BUFFER
+            
+            ; TESTING, currently assuming register is the source
+            MOVE.B  #'D',(A1)+
+            ADD.B   #$30,D1     ; convert register number to hex
+            MOVE.B  D1,(A1)+    ; push register number
+            MOVE.B  #',',(A1)+
+            MOVE.B  #' ',(A1)+
+            
+            JSR     OPERATION_TYPE
+            JSR     GET_REGISTER_NUMBER
+
+            BRA     IDENTIFY_OPCODE
+
+;===========================================================
+OPC_1100_MULS:  ; MULS opcode subroutine
+
+            ; load the command name into the output
+            MOVE.B  #'M',(A1)+
+            MOVE.B  #'U',(A1)+
+            MOVE.B  #'L',(A1)+
+            MOVE.B  #'S',(A1)+
+            MOVE.B  #'.',(A1)+
+            
+            ; always goes to opmode 1
+            
+; used by AND, MULS, and DIVU
+EA_SANS_AN:
+
+; only AND will use mode 2
+EA_AND_MODE_TWO:
+
+            
+*-----------------------------------------------------------
 
 
 *-----------------------------------------------------------
@@ -653,6 +734,20 @@ DONE:
             MOVE.B    #14, D0
             LEA.L     doneMsg, A1
             TRAP      #15
+            
+            ; TESTING
+            ; print out the command
+            MOVE.B  #00,(A1)+ ; add the null
+            MOVE.L  #$00000000,A1
+            MOVE.B  #13,D0
+            TRAP    #15
+            
             CLR_A_REG D0, A1
 
             END       MAIN              ; last line of source
+
+
+*~Font name~Courier New~
+*~Font size~10~
+*~Tab type~1~
+*~Tab size~4~
