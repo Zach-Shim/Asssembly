@@ -68,10 +68,9 @@ CLR_A_REG:  MACRO
 
 
 
-
 *-----------------------------------------------------------
 * Description:  
-* Get User Input
+* Main routine
 *-----------------------------------------------------------
 
 *-------------------------MAIN------------------------------
@@ -135,6 +134,7 @@ GET_END_ADDRESS:
             ;MOVE.B  D1, endSize
             BRA     CHECK_LENGTH
 *-----------------------------------------------------------
+
 
 
 
@@ -387,6 +387,7 @@ LOAD_ADDRESSES:
             BSR     GRAB_FIRST_FOUR_BITS     ; grabs that opcode's ID (first four bits)
 
             * Push current registers onto the stack (so we can have fresh registers)
+            MOVE.L  
             MOVEM.L D0-D7,-(SP)              ; move the old registers onto the stack
             BRA     FIND_OPCODE
 *-----------------------------------------------------------
@@ -480,6 +481,9 @@ FIND_OPCODE:
             CMP.B   #%0100, opTag 
             BEQ     opc_0100
 
+            CMP.B   #%1001, opTag
+            BEQ     opc_1001
+
             CMP.B   #%1101, opTag
             BEQ     opc_1101
 
@@ -548,6 +552,21 @@ GET_NOT_SIZE:
             * store in appropriate register
             MOVE.B  D2, D3
             RTS
+*-----------------------------------------------------------
+
+*---------------------------opc_1001------------------------
+opc_1001:
+            * fill in A1 register
+            MOVE.B  #'S',(A1)+          * Put ADD into Buff
+            MOVE.B  #'U',(A1)+
+            MOVE.B  #'B',(A1)+
+            MOVE.B  #'.',(A1)+
+            JSR     GET_ADD_SIZE
+            JSR     SIZE_TO_BUFFER
+            JSR     OPMODE_TYPE         * 0 or 1 value (either <ea> -> Dn or Dn -> <ea>)  
+            CMP.B   #1, D4              * is this Dn + <ea> -> <ea>?
+            BEQ     D_TO_EA
+            BNE     EA_TO_D
 *-----------------------------------------------------------
 
 *---------------------------opc_1101------------------------
@@ -652,8 +671,9 @@ GET_DATA_REG_NUM:
 
 *----------------------------GET_EA_MODE------------------------
 * Description:
-* Evaluates the ea mode of an opcode (usually last 6 bits of 
-* instruction format) and adds it to A1 to be printed out
+* Evaluates the ea mode and register of an opcode 
+* (usually last 6 bits of instruction format),
+* and adds it to A1 to be printed out
 *
 * No Parameters
 *
@@ -682,7 +702,7 @@ GET_EA_MODE:
             BRA     FIND_MODE
 
 *----------------------------FIND_MODE------------------------
-FIND_MODE:                               * table holds the different EA modes
+FIND_MODE:                            
  
             CMP.B   #%0000, D5        * Direct Data Register
             BEQ     ea_000
@@ -969,6 +989,14 @@ LONG_TO_BUFFER:
 STB_END:
             MOVE.B  #' ',(A1)+          * add blank space to buffer
             RTS                         
+
+
+
+
+
+
+
+
 
 *-------------------------DONE-------------------------------
 DONE:
