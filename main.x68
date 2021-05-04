@@ -61,11 +61,41 @@ CLR_A_REG:  MACRO
             MOVE.L  \1, \2
             ENDM              
 
+*-----------------------------------------------------------
+* \1 should be highest bit in range
+* \2 should be lowest bit in range
+* \3 should be D4
+* SHIFT    #11, #9, D0
+* this will return bits 11 to 9 into D0
+*
+* Registers:
+*   D4 = holds opcode
+*   D5 = highest bit in range 
+*   D6 = lowest bit in range 
+*   D7 = number of bits we want
+*-----------------------------------------------------------
+GET_BITS:   
+            * Subtract value to find amount to shift by 
+            ADD.B   #11, D7          
+            SUB.B   #9, D7 
+            ADD.B   #1, D7  * add 1 because we start our count from 0
 
-
-
-
-
+            * Get high bit offset
+            ADD.B   #15, D5
+            SUB.B   #11, D5
+            
+            * shift out high bits
+            MOVE.W  #$D401, D4
+            LSL.W   D5, D4
+            
+            *get low bit offset
+            *16 - NUMBER OF BITS WE WANT
+            ADD.B   #16, D6         * 16 total bits
+            SUB.L   D7, D6          * subtract numBits from 16
+            
+            * shift out low bits
+            LSR.W   D6, D4          * isolate bits
+            RTS
 
 
 *-----------------------------------------------------------
@@ -78,7 +108,6 @@ MAIN:
             BSR     GET_INPUT
             BRA     LOAD_ADDRESSES
 *-----------------------------------------------------------
-
 
 
 
@@ -309,16 +338,16 @@ PRINT_ADDRESS:
 
 PRINT_WORD:
             CLR_D_REGS
-            MOVE.B    #1, D1            * passing 1 means we are passing word as a parameter to ASCII_TO_HEX
-            MOVE.W    A2, D7            * passing current parsing position means we are passing an address as a parameter in D7 to ASCII_TO_HEX
-            JSR       ASCII_TO_HEX
+            MOVE.B    #1, D1            * passing 1 means we are passing word as a parameter to HEX_TO_ASCII
+            MOVE.W    A2, D7            * passing current parsing position means we are passing an address as a parameter in D7 to HEX_TO_ASCII
+            JSR       HEX_TO_ASCII
             BRA       FINISH_PRINT
 
 PRINT_LONG:
             CLR_D_REGS
-            MOVE.B    #3, D1            * passing 1 means we are passing long as a parameter to ASCII_TO_HEX
+            MOVE.B    #3, D1            * passing 1 means we are passing long as a parameter to HEX_TO_ASCII
             MOVE.L    A2, D7
-            JSR       ASCII_TO_HEX
+            JSR       HEX_TO_ASCII
             BRA       FINISH_PRINT
 
 FINISH_PRINT:
@@ -382,12 +411,12 @@ LOAD_ADDRESSES:
             MOVEA.L startAddr, A2
             MOVEA.L endAddr, A3
             BSR     PRINT_ADDRESS
+            JSR     INSERT_SPACE
 
             BSR     GRAB_NEXT_WORD
             BSR     GRAB_FIRST_FOUR_BITS     ; grabs that opcode's ID (first four bits)
 
             * Push current registers onto the stack (so we can have fresh registers)
-            MOVE.L  
             MOVEM.L D0-D7,-(SP)              ; move the old registers onto the stack
             BRA     FIND_OPCODE
 *-----------------------------------------------------------
@@ -399,9 +428,7 @@ LOAD_ADDRESSES:
 *   D1 = size of shifting bits
 *   D2 = destination for shifts
 *   D3 = size of opcode
-*   D4 = <ea> vs Dn (0 = <ea>, 1 = Dn)
-*   D5 = addressing mode
-*   D6 = register number
+*   D4 = used to hold bits returned from SHIFT macro
 *   D7 = holds address (word in length)
 *   A1 = used for task 14 (printing out strings to screen) and trap #15
 *   A2 = current address (given by user)
@@ -422,6 +449,7 @@ IDENTIFY_OPCODE:
             
             * print next address
             BSR     PRINT_ADDRESS
+            JSR     INSERT_SPACE
             
             ;BSR     RESTORE_REGS           need to fix
 
@@ -483,6 +511,9 @@ FIND_OPCODE:
 
             CMP.B   #%1001, opTag
             BEQ     opc_1001
+
+            CMP.B   #%1100, opTag
+            BEQ     opc_1100
 
             CMP.B   #%1101, opTag
             BEQ     opc_1101
@@ -561,13 +592,43 @@ opc_1001:
             MOVE.B  #'U',(A1)+
             MOVE.B  #'B',(A1)+
             MOVE.B  #'.',(A1)+
-            JSR     GET_ADD_SIZE
+            JSR     GET_HIGH_REG_SIZE
             JSR     SIZE_TO_BUFFER
             JSR     OPMODE_TYPE         * 0 or 1 value (either <ea> -> Dn or Dn -> <ea>)  
             CMP.B   #1, D4              * is this Dn + <ea> -> <ea>?
             BEQ     D_TO_EA
             BNE     EA_TO_D
 *-----------------------------------------------------------
+
+*---------------------------opc_1100------------------------
+opc_1100:   ; AND opcode subroutine
+
+            ;-----------------------------
+            ; fill A1 with the opcode name
+            MOVE.B  #'A',(A1)+
+            MOVE.B  #'N',(A1)+
+            MOVE.B  #'D',(A1)+
+            MOVE.B  #'.',(A1)+
+
+
+            JSR     GET_HIGH_REG_SIZE
+            JSR     SIZE_TO_BUFFER
+            JSR     OPMODE_TYPE         * 0 or 1 value (either <ea> -> Dn or Dn -> <ea>)
+            CMP.B   #1, D4              * is this Dn + <ea> -> <ea>
+            BEQ     D_TO_EA
+            BNE     EA_TO_D
+
+            BRA     IDENTIFY_OPCODE
+
+*---------------------------opc_1101------------------------
+OPC_1100_MULS:  ; MULS opcode subroutine
+
+            ; load the command name into the output
+            MOVE.B  #'M',(A1)+
+            MOVE.B  #'U',(A1)+
+            MOVE.B  #'L',(A1)+
+            MOVE.B  #'S',(A1)+
+            MOVE.B  #'.',(A1)+
 
 *---------------------------opc_1101------------------------
 * First four bits = 1101
@@ -580,7 +641,7 @@ opc_1101:
             MOVE.B  #'D',(A1)+
             MOVE.B  #'.',(A1)+
 
-            JSR     GET_ADD_SIZE
+            JSR     GET_HIGH_REG_SIZE
             JSR     SIZE_TO_BUFFER
             JSR     OPMODE_TYPE         * 0 or 1 value (either <ea> -> Dn or Dn -> <ea>)  
             CMP.B   #1, D4              * is this Dn + <ea> -> <ea>?
@@ -604,7 +665,7 @@ ADD_DONE:
             BRA     IDENTIFY_OPCODE
             
 
-GET_ADD_SIZE:
+GET_HIGH_REG_SIZE:
             CLR.L   D2
             MOVE.W  opcode ,D2          ; copy current instruction to shift
             
@@ -703,7 +764,6 @@ GET_EA_MODE:
 
 *----------------------------FIND_MODE------------------------
 FIND_MODE:                            
- 
             CMP.B   #%0000, D5        * Direct Data Register
             BEQ     ea_000
 
@@ -722,7 +782,7 @@ FIND_MODE:
             CMP.B   #%0101, D5        * Not necessary, go to bad ea
             BEQ     ea_101
 
-            CMP.B   #%0111, D5        * Not necessary, go to bad ea
+            CMP.B   #%0110, D5        * Not necessary, go to bad ea
             BEQ     ea_110
 
             CMP.B   #%0111, D5        * Absolute or immediate address
@@ -806,7 +866,7 @@ ea_100:
 
             MOVE.B      #')',(A1)+               * add ")" to buffer
             
-            RTS                               
+            RTS
 
 *----------------------------Not necessary, go to bad ea------------------------
 ea_101:
@@ -820,19 +880,36 @@ ea_110:
 
 *----------------------------Absolute or immediate address------------------------
 ea_111:
+            * D405      0 0003456  23345245
+            * ADD.L     $1234, D0
 
-            MOVE.B      #13, D1
-            LSL.W       D1,D2                   * isolate register bits (last 3)
-            LSR.W       D1,D2                   * isolate register bits (last 3)
-            ADD.B       #$30,D2                 * convert data register # to ASCII digit
+            * 8 bit value
+            * 11111111
 
-            CMP.B       #%0000,D6               * compare to determine if it's a word
+            * 11111011 - Direct data register would be Invalid
+            * 00000100
+            * 00000000 -> invalid code
+
+            * and.b     #$F, Dn        ---->  10000000
+            * cmp.b     #%10000000, Dn  
+
+            * check against valid bits
+                * if invalid, branch to invalid opcode subroutine
+                    * if the mode is 111, then go back and print out addresses
+
+            MOVE.B      #'$', (A1)+
+            MOVE.B      #15, D1
+            LSL.W       D1, D2                   * isolate register bits (last 3)
+            LSR.W       D1, D2                   * isolate register bits (last 3)
+            ;ADD.B       #$30, D2                 * convert data register # to ASCII digit
+
+            CMP.B       #%0000, D2               * compare to determine if it's a word
             BEQ         EA_WORD                 * put word address in buffer
 
-            CMP.B       #%0001,D6               * compare to determine if it's a long
+            CMP.B       #%0001, D2               * compare to determine if it's a long
             BEQ         EA_LONG                 * put long address in buffer
             
-            CMP.B       #%0100,D6
+            CMP.B       #%0100, D2
             BEQ         PRINT_IMMEDIATE
 
             * NEED TO WORK ON IMMEDIATE
@@ -841,14 +918,14 @@ EA_WORD:
             CLR.L       D1
             MOVE.B      #1, D1
             MOVE.W      (A2)+, D7
-            BSR         ASCII_TO_HEX
+            BSR         HEX_TO_ASCII
             BRA         GET_EA_DONE
 
 EA_LONG:
             CLR.L       D1
             MOVE.B      #3, D1
             MOVE.L      (A2)+, D7   
-            BSR         ASCII_TO_HEX
+            BSR         HEX_TO_ASCII
             BRA         GET_EA_DONE
 
 GET_EA_DONE:
@@ -866,30 +943,28 @@ INVALID_EA:
 
 
 
-
-
-
-
-
 *----------------------HEX TO ASCII-------------------------
 * Description:
 * Converts a Hex numbered address (1-9 or A-F) back to an
 * ASCII value for printing
 *
-* Parameters:
+* Parameters (if calling HEX_TO_ASCII (always used by print subroutine)):
 *   D1 = pass in 1 if the address is a word, pass in 3 if address is a long
 *   D7 = holds the original address to parse (either word or long, for example: $7000)
 *
+* Parameters (if calling NUMBER_OR_LETTER (usually done in opcode sections)):
+*   D2 = should hold value (in hex) you want to push to the buffer
+*
 * Registers Used:
 *   D0 = number of bits to remove
-*   D2 = holds either top four bits of bottom four bits of each byte in D6
+*   D2 = holds either top four bits or bottom four bits of each byte in D6
 *   D3 = holds temp data
 *   D6 = holds part of address (used as temp variable)
 *   A1 = used for buffer
 *-----------------------------------------------------------
 PRINT_IMMEDIATE:
             
-ASCII_TO_HEX:
+HEX_TO_ASCII:
             MOVE.B   D1, D0             * current number of bytes to remove
             MULS.W   #8, D0             * number of bits to remove
 
@@ -911,7 +986,7 @@ ASCII_TO_HEX:
             CMP.B    #0, D1             * done if equal
             BLT      ATH_DONE
 
-            BRA      ASCII_TO_HEX
+            BRA      HEX_TO_ASCII
 
 NUMBER_OR_LETTER:
             MOVE.B   D2, D3
@@ -920,29 +995,32 @@ NUMBER_OR_LETTER:
             BLE      NUMBER_TO_ASCII
             
             MOVE.B   D2, D3
-            ADD.B    #$39, D3           
+            ADD.B    #$37, D3           
             CMP.B    #$39, D3           * is byte in D2 a letter?
             BGE      LETTER_TO_ASCII
+
+            BRA      INVALID_EA
 
 NUMBER_TO_ASCII:
             ADD.B    #$30, D2           * Get the hex range from '0-9'
             BRA      ADD_TO_BUFFER
 
 LETTER_TO_ASCII:
-            ADD.B    #$39, D2           * Get the hex range from 'A-F'
+            ADD.B    #$37, D2           * Get the hex range from 'A-F'
             BRA      ADD_TO_BUFFER
 
 ADD_TO_BUFFER:
-            MOVE.B   D2, (A1)+          * add part of address to buffer    
+            MOVE.B   D3, (A1)+          * add part of address to buffer    
             RTS
 
 ATH_DONE:
-            MOVE.B  #' ',(A1)+          * add blank space to buffer
             CLR_D_REGS
             RTS
 *-----------------------------------------------------------
 
-
+INSERT_SPACE:
+            MOVE.B  #' ',(A1)+          * add blank space to buffer
+            RTS
 
 
 
@@ -1007,3 +1085,8 @@ DONE:
             CLR_A_REG D0, A1
 
             END       MAIN              ; last line of source
+
+*~Font name~Courier New~
+*~Font size~12~
+*~Tab type~1~
+*~Tab size~4~
