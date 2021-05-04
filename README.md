@@ -2,7 +2,7 @@
 ## Rundown:
 <p>
  <ul>
- Combined ADD, SUB, and AND subroutines into one function, since all of them share the same bit placements. So those are all done (haven't tested all addressing modes though).
+Combined ADD, SUB, and AND subroutines into one function, since all of them share the same bit placements. So those are all done (haven't tested all addressing modes though).
 </ul>
 </p>
 
