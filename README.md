@@ -1,4 +1,15 @@
 # Disassembler or DASM FOR SHORT
+
+## TODO List for this week:
+1) Integrating GET_BITS to current (and future) opcodes   
+2) Pick an opcode to work on (possibly similar to the one you already made for simplicity) and try to make as much progress before thursday   
+3) Write Progress Report 2 by Thursday night
+
+## Curernt Opcode You Are Working On:
+Zach:  
+Brendan: MULS   
+Lucas:    
+
 ## Rundown:
 <p>
 Combined ADD, SUB, and AND subroutines into one function, since all of them share the same bit placements. So those are all done (haven't tested all addressing modes though).
