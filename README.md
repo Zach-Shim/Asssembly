@@ -43,7 +43,6 @@ Current Supported Opcodes
 Opcdoes that will be supported in the future:
 <ul>
   <li> MOVE, MOVEM
-  <li> SUB
   <li> MULS, DIVU
   <li> LEA
   <li> NOT
