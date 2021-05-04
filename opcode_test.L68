@@ -1,22 +1,29 @@
 00007000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/30/2021 2:47:48 PM
+Created On: 5/3/2021 7:14:34 PM
 
 00000000                             1  
 00000000                             2  *-----------------------------------------------------------
-00000000                             3  * Title      :nop
+00000000                             3  * Title      :Testing File
 00000000                             4  * Written by :Lucas Buckeye, Brendan Hurt, Zach Shim
 00000000                             5  * Date       :4.19.21
-00000000                             6  * Description:v1.0
+00000000                             6  * Description:v1.2
 00000000                             7  *-----------------------------------------------------------
 00000000                             8  
 00007000                             9          ORG     $7000
 00007000                            10  MAIN:
-00007000  D401                      11          ADD.B   D1, D2
-00007002                            12  
-00007002                            13  DONE:
-00007002  FFFF FFFF                 14          SIMHALT             ; halt simulator
-00007006                            15          END     MAIN        ; last line of source
+00007000  C07C 0010                 11          AND.W   #$0010, D0
+00007004  DC9C                      12          ADD.L   (A4)+, D6
+00007006  9C44                      13          SUB.W   D4, D6
+00007008  9C83                      14          SUB.L   D3, D6
+0000700A                            15   
+0000700A  4685                      16          NOT.L   D5
+0000700C  4E71                      17          NOP    
+0000700E  D401                      18          ADD.B   D1, D2
+00007010  4682                      19          NOT.L   D2
+00007012                            20  DONE:
+00007012  FFFF FFFF                 21          SIMHALT             ; halt simulator
+00007016                            22          END     MAIN        ; last line of source
 
 No errors detected
 No warnings generated
@@ -25,5 +32,5 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DONE                7002
+DONE                7012
 MAIN                7000
