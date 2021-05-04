@@ -913,6 +913,7 @@ ea_111:
                     * if the mode is 111, then go back and print out addresses
 
             MOVE.B      #'$', (A1)+
+            MOVE.W      opcode, D2
             MOVE.B      #15, D1
             LSL.W       D1, D2                   * isolate register bits (last 3)
             LSR.W       D1, D2                   * isolate register bits (last 3)
@@ -925,7 +926,7 @@ ea_111:
             BEQ         EA_LONG                 * put long address in buffer
             
             CMP.B       #%0100, D2
-            BEQ         PRINT_IMMEDIATE
+            BEQ         EA_IMMEDIATE
 
             * NEED TO WORK ON IMMEDIATE
 
@@ -942,6 +943,10 @@ EA_LONG:
             MOVE.L      (A2)+, D7   
             BSR         HEX_TO_ASCII
             BRA         GET_EA_DONE
+
+EA_IMMEDIATE:
+            * NEED TO WRITE
+
 
 GET_EA_DONE:
             RTS
@@ -977,8 +982,6 @@ INVALID_EA:
 *   D6 = holds part of address (used as temp variable)
 *   A1 = used for buffer
 *-----------------------------------------------------------
-PRINT_IMMEDIATE:
-            
 HEX_TO_ASCII:
             MOVE.B   D1, D0             * current number of bytes to remove
             MULS.W   #8, D0             * number of bits to remove
