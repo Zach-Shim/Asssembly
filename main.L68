@@ -1,6 +1,6 @@
 000010A0 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/3/2021 7:18:53 PM
+Created On: 5/3/2021 6:25:19 PM
 
 00000000                             1  *-----------------------------------------------------------
 00000000                             2  * Title      :DASM
@@ -17,24 +17,24 @@ Created On: 5/3/2021 7:18:53 PM
 00007002                            13  
 00001000                            14              ORG     $1000
 00001000                            15  
-00001000  =0000000D                 16  CR          EQU     $0D             ; Define Carriage Return and Line Feed
-00001000  =0000000A                 17  LF          EQU     $0A 
-00001000                            18  
-00001000= 50 6C 65 61 73 65 ...     19  startMsg:   DC.B    'Please enter a starting address ', CR, LF, 0
-00001023= 50 6C 65 61 73 65 ...     20  endMsg:     DC.B    'Please enter an ending address ', CR, LF, 0
-00001045= 65 78 69 74 69 6E ...     21  doneMsg:    DC.B    'exiting...', CR, LF, 0
-00001052= 49 6E 76 61 6C 69 ...     22  badInput:   DC.B    'Invalid Input', CR, LF, 0
-00001062= 0D 0A 00                  23  newline:    DC.B    '', CR, LF, 0
-00001065                            24  
-00001066                            25  userAddr:   DS.L    1
-0000106A                            26  startAddr:  DS.L    1
-0000106E                            27  endAddr:    DS.L    1
-00001072                            28  
-00001072                            29  opOutput:   DS.L    2
-0000107A                            30  
-0000107A                            31  opcode:     DS.W    1   
-0000107C                            32  opTag:      DS.B    1               ; a four bit identifier for opcodes (first four bits of an instruction, ex. 1011 = ADD)
-0000107D                            33  valid:      DS.B    1
+00001000= 50 6C 65 61 73 65 ...     16  startMsg:   DC.B    'Please enter a starting address ', CR, LF, 0
+00001023= 50 6C 65 61 73 65 ...     17  endMsg:     DC.B    'Please enter an ending address ', CR, LF, 0
+00001045= 65 78 69 74 69 6E ...     18  doneMsg:    DC.B    'exiting...', CR, LF, 0
+00001052= 49 6E 76 61 6C 69 ...     19  badInput:   DC.B    'Invalid Input', CR, LF, 0
+00001062= 0D 0A 00                  20  newline:    DC.B    '', CR, LF, 0
+00001065                            21  
+00001066                            22  userAddr:   DS.L    1
+0000106A                            23  startAddr:  DS.L    1
+0000106E                            24  endAddr:    DS.L    1
+00001072                            25  
+00001072                            26  opOutput:   DS.L    2
+0000107A                            27  
+0000107A                            28  opcode:     DS.W    1   
+0000107C                            29  opTag:      DS.B    1               ; a four bit identifier for opcodes (first four bits of an instruction, ex. 1011 = ADD)
+0000107D                            30  valid:      DS.B    1
+0000107E                            31  
+0000107E                            32  
+0000107E                            33  
 0000107E                            34  
 0000107E                            35  
 0000107E                            36  
@@ -344,14 +344,14 @@ Created On: 5/3/2021 7:18:53 PM
 000011F0                           340m             CLR_D_REGS
 00001200  123C 0001                341              MOVE.B    #1, D1            * passing 1 means we are passing word as a parameter to HEX_TO_ASCII
 00001204  3E0A                     342              MOVE.W    A2, D7            * passing current parsing position means we are passing an address as a parameter in D7 to HEX_TO_ASCII
-00001206  4EB9 000015BC            343              JSR       HEX_TO_ASCII
+00001206  4EB9 000015E8            343              JSR       HEX_TO_ASCII
 0000120C  6000 0022                344              BRA       FINISH_PRINT
 00001210                           345  
 00001210                           346  PRINT_LONG:
 00001210                           347m             CLR_D_REGS
 00001220  123C 0003                348              MOVE.B    #3, D1            * passing 1 means we are passing long as a parameter to HEX_TO_ASCII
 00001224  2E0A                     349              MOVE.L    A2, D7
-00001226  4EB9 000015BC            350              JSR       HEX_TO_ASCII
+00001226  4EB9 000015E8            350              JSR       HEX_TO_ASCII
 0000122C  6000 0002                351              BRA       FINISH_PRINT
 00001230                           352  
 00001230                           353  FINISH_PRINT:
@@ -381,9 +381,9 @@ Created On: 5/3/2021 7:18:53 PM
 0000126C  4E75                     377              RTS
 0000126E                           378  *-----------------------------------------------------------
 0000126E                           379  
-0000126E                           380  
-0000126E                           381  
-0000126E                           382  
+0000126E                           380  *-----------------------DONE PARSING------------------------
+0000126E                           381  * Compares Start and End addresses to determine if we are done parsing
+0000126E                           382  DONE_PARSING:
 0000126E                           383  
 0000126E                           384  
 0000126E                           385  
@@ -391,722 +391,704 @@ Created On: 5/3/2021 7:18:53 PM
 0000126E                           387  
 0000126E                           388  
 0000126E                           389  
-0000126E                           390  *---------------------LOAD ADDRESSES------------------------
-0000126E                           391  * Description:
-0000126E                           392  * Stores INITIAL values into appropriate address registers 
-0000126E                           393  * which is necessary to complete before starting identify opcodes loop
-0000126E                           394  * Also pushes reigsters onto the stack
-0000126E                           395  *
-0000126E                           396  * No Parameters
-0000126E                           397  *
-0000126E                           398  * Registers:
-0000126E                           399  *   A2 = current address (given by user)
-0000126E                           400  *   A3 = ending address (given by user)
-0000126E                           401  *-----------------------------------------------------------
-0000126E                           402  LOAD_ADDRESSES: 
-0000126E                           403              * reset A1 to beginning of string
-0000126E  4280                     404              CLR.L     D0
-00001270                           405m             CLR_A_REG D0, A1
-00001274                           406  
-00001274                           407              * load start and end registers and print starting address
-00001274  2478 106A                408              MOVEA.L startAddr, A2
-00001278  2678 106E                409              MOVEA.L endAddr, A3
-0000127C  6100 FF44                410              BSR     PRINT_ADDRESS
-00001280  4EB9 00001628            411              JSR     INSERT_SPACE
-00001286                           412  
-00001286  6100 0042                413              BSR     GRAB_NEXT_WORD
-0000128A  6100 0044                414              BSR     GRAB_FIRST_FOUR_BITS     ; grabs that opcode's ID (first four bits)
-0000128E                           415  
-0000128E                           416              * Push current registers onto the stack (so we can have fresh registers)
-0000128E  48E7 FF00                417              MOVEM.L D0-D7,-(SP)              ; move the old registers onto the stack
-00001292  6000 004E                418              BRA     FIND_OPCODE
-00001296                           419  *-----------------------------------------------------------
-00001296                           420  
-00001296                           421  *-----------------------------------------------------------
-00001296                           422  * Description:  IDENTIFY OPCODES LOOP
-00001296                           423  * Registers:
-00001296                           424  *   D0 = used for tasks and trap #15
-00001296                           425  *   D1 = size of shifting bits
-00001296                           426  *   D2 = destination for shifts
-00001296                           427  *   D3 = size of opcode
-00001296                           428  *   D4 = used to hold bits returned from SHIFT macro
-00001296                           429  *   D7 = holds address (word in length)
-00001296                           430  *   A1 = used for task 14 (printing out strings to screen) and trap #15
-00001296                           431  *   A2 = current address (given by user)
-00001296                           432  *   A3 = ending address (given by user)
-00001296                           433  *-----------------------------------------------------------
-00001296                           434  *-------------------IDENTIFY OPCODES------------------------
-00001296                           435  * evaluates an opcode based on first four bits (aka opTag)
-00001296                           436  * for now only works with one instruction
-00001296                           437  *-----------------------------------------------------------
-00001296                           438  IDENTIFY_OPCODE:
-00001296                           439  
-00001296                           440              * print opcode
-00001296  61B8                     441              BSR     PRINT_INSTRUCTION
-00001298                           442  
-00001298                           443              * check to see if we are done (start address >= end address)
-00001298  B5CB                     444              CMPA.L  A3, A2
-0000129A  6C00 03CC                445              BGE     DONE
-0000129E                           446              
-0000129E                           447              * print next address
-0000129E  6100 FF22                448              BSR     PRINT_ADDRESS
-000012A2  4EB9 00001628            449              JSR     INSERT_SPACE
-000012A8                           450              
-000012A8                           451              ;BSR     RESTORE_REGS           need to fix
-000012A8                           452  
-000012A8                           453m             CLR_D_REGS
-000012B8  6100 0010                454              BSR     GRAB_NEXT_WORD          * grab opcode
-000012BC  6100 0012                455              BSR     GRAB_FIRST_FOUR_BITS    * grabs that opcode's ID (first four bits)
-000012C0                           456             
-000012C0  6000 0020                457              BRA     FIND_OPCODE
-000012C4                           458  *-----------------------------------------------------------
-000012C4                           459  
-000012C4                           460  *----------------------RESTORE_REGS--------------------------
-000012C4                           461  * Description:
-000012C4                           462  * Move the old registers onto the stack
-000012C4                           463  RESTORE_REGS:
-000012C4  4CDF 00FF                464              MOVEM.L (SP)+, D0-D7            
-000012C8  4E75                     465              RTS
-000012CA                           466  *-----------------------------------------------------------
-000012CA                           467  
-000012CA                           468  *---------Useful Subroutines For Identifying Opcodes--------
-000012CA                           469  GRAB_NEXT_WORD:
-000012CA                           470              * load current word of bits into D7
-000012CA  31DA 107A                471              MOVE.W (A2)+, opcode
-000012CE  4E75                     472              RTS
-000012D0                           473  
-000012D0                           474  GRAB_FIRST_FOUR_BITS:
-000012D0                           475              * find first four bits of opcode
-000012D0  3438 107A                476              MOVE.W  opcode, D2
-000012D4  123C 000C                477              MOVE.B  #12, D1
-000012D8  E2AA                     478              LSR.L   D1, D2
-000012DA  1002                     479              MOVE.B  D2, D0
-000012DC  11C0 107C                480              MOVE.B  D0, opTag
-000012E0  4E75                     481              RTS
-000012E2                           482  *-----------------------------------------------------------
-000012E2                           483  
-000012E2                           484  
-000012E2                           485  
+0000126E                           390  
+0000126E                           391  
+0000126E                           392  
+0000126E                           393  *---------------------LOAD ADDRESSES------------------------
+0000126E                           394  * Description:
+0000126E                           395  * Stores INITIAL values into appropriate address registers 
+0000126E                           396  * which is necessary to complete before starting identify opcodes loop
+0000126E                           397  * Also pushes reigsters onto the stack
+0000126E                           398  *
+0000126E                           399  * No Parameters
+0000126E                           400  *
+0000126E                           401  * Registers:
+0000126E                           402  *   A2 = current address (given by user)
+0000126E                           403  *   A3 = ending address (given by user)
+0000126E                           404  *-----------------------------------------------------------
+0000126E                           405  LOAD_ADDRESSES: 
+0000126E                           406              * reset A1 to beginning of string
+0000126E  4280                     407              CLR.L     D0
+00001270                           408m             CLR_A_REG D0, A1
+00001274                           409  
+00001274                           410              * load start and end registers and print starting address
+00001274  2478 106A                411              MOVEA.L startAddr, A2
+00001278  2678 106E                412              MOVEA.L endAddr, A3
+0000127C  6100 FF44                413              BSR     PRINT_ADDRESS
+00001280  4EB9 00001654            414              JSR     INSERT_SPACE
+00001286                           415  
+00001286  6100 0042                416              BSR     GRAB_NEXT_WORD
+0000128A  6100 0044                417              BSR     GRAB_FIRST_FOUR_BITS     ; grabs that opcode's ID (first four bits)
+0000128E                           418  
+0000128E                           419              * Push current registers onto the stack (so we can have fresh registers)
+0000128E  48E7 FF00                420              MOVEM.L D0-D7,-(SP)              ; move the old registers onto the stack
+00001292  6000 004E                421              BRA     FIND_OPCODE
+00001296                           422  *-----------------------------------------------------------
+00001296                           423  
+00001296                           424  *-----------------------------------------------------------
+00001296                           425  * Description:  IDENTIFY OPCODES LOOP
+00001296                           426  * Registers:
+00001296                           427  *   D0 = used for tasks and trap #15
+00001296                           428  *   D1 = size of shifting bits
+00001296                           429  *   D2 = destination for shifts
+00001296                           430  *   D3 = size of opcode
+00001296                           431  *   D4 = used to hold bits returned from SHIFT macro
+00001296                           432  *   D7 = holds address (word in length)
+00001296                           433  *   A1 = used for task 14 (printing out strings to screen) and trap #15
+00001296                           434  *   A2 = current address (given by user)
+00001296                           435  *   A3 = ending address (given by user)
+00001296                           436  *-----------------------------------------------------------
+00001296                           437  *-------------------IDENTIFY OPCODES------------------------
+00001296                           438  * evaluates an opcode based on first four bits (aka opTag)
+00001296                           439  * for now only works with one instruction
+00001296                           440  *-----------------------------------------------------------
+00001296                           441  IDENTIFY_OPCODE:
+00001296                           442  
+00001296                           443              * print opcode
+00001296  61B8                     444              BSR     PRINT_INSTRUCTION
+00001298                           445  
+00001298                           446              * check to see if we are done (start address >= end address)
+00001298  B5CB                     447              CMPA.L  A3, A2
+0000129A  6C00 03F8                448              BGE     DONE
+0000129E                           449              
+0000129E                           450              * print next address
+0000129E  6100 FF22                451              BSR     PRINT_ADDRESS
+000012A2  4EB9 00001654            452              JSR     INSERT_SPACE
+000012A8                           453              
+000012A8                           454              ;BSR     RESTORE_REGS           need to fix
+000012A8                           455  
+000012A8                           456m             CLR_D_REGS
+000012B8  6100 0010                457              BSR     GRAB_NEXT_WORD          * grab opcode
+000012BC  6100 0012                458              BSR     GRAB_FIRST_FOUR_BITS    * grabs that opcode's ID (first four bits)
+000012C0                           459             
+000012C0  6000 0020                460              BRA     FIND_OPCODE
+000012C4                           461  *-----------------------------------------------------------
+000012C4                           462  
+000012C4                           463  *----------------------RESTORE_REGS--------------------------
+000012C4                           464  * Description:
+000012C4                           465  * Move the old registers onto the stack
+000012C4                           466  RESTORE_REGS:
+000012C4  4CDF 00FF                467              MOVEM.L (SP)+, D0-D7            
+000012C8  4E75                     468              RTS
+000012CA                           469  *-----------------------------------------------------------
+000012CA                           470  
+000012CA                           471  *---------Useful Subroutines For Identifying Opcodes--------
+000012CA                           472  GRAB_NEXT_WORD:
+000012CA                           473              * load current word of bits into D7
+000012CA  31DA 107A                474              MOVE.W (A2)+, opcode
+000012CE  4E75                     475              RTS
+000012D0                           476  
+000012D0                           477  GRAB_FIRST_FOUR_BITS:
+000012D0                           478              * find first four bits of opcode
+000012D0  3438 107A                479              MOVE.W  opcode, D2
+000012D4  123C 000C                480              MOVE.B  #12, D1
+000012D8  E2AA                     481              LSR.L   D1, D2
+000012DA  1002                     482              MOVE.B  D2, D0
+000012DC  11C0 107C                483              MOVE.B  D0, opTag
+000012E0  4E75                     484              RTS
+000012E2                           485  *-----------------------------------------------------------
 000012E2                           486  
 000012E2                           487  
 000012E2                           488  
 000012E2                           489  
 000012E2                           490  
 000012E2                           491  
-000012E2                           492  *----------------------FIND OPCODE--------------------------
-000012E2                           493  * Description:
-000012E2                           494  * Finds a matching opTag (first four bits of opcode) and 
-000012E2                           495  * jumps to that opcode's encoding subroutine
-000012E2                           496  *
-000012E2                           497  * For example:
-000012E2                           498  *               ADD's first four bits = 1101, so I put
-000012E2                           499  *               CMP.B #%1101, D0
-000012E2                           500  *
-000012E2                           501  * No Parameters
-000012E2                           502  *
-000012E2                           503  * No Registers Used
-000012E2                           504  *-----------------------------------------------------------        
-000012E2                           505  FIND_OPCODE:
-000012E2  0C38 0004 107C           506              CMP.B   #%0100, opTag 
-000012E8  6700 002A                507              BEQ     OPC_0100
-000012EC                           508  
-000012EC  0C38 0009 107C           509              CMP.B   #%1001, opTag
-000012F2  6700 0084                510              BEQ     OPC_1001
-000012F6                           511  
-000012F6  0C38 000C 107C           512              CMP.B   #%1100, opTag
-000012FC  6700 008E                513              BEQ     OPC_1100
-00001300                           514  
-00001300  0C38 000D 107C           515              CMP.B   #%1101, opTag
-00001306  6700 00AC                516              BEQ     OPC_1101
-0000130A                           517  
-0000130A                           518              * error, bad opcode
-0000130A  6000 0002                519              BRA      BAD_OPCODE
-0000130E                           520  
-0000130E                           521  *-----------------------------------------------------------
-0000130E                           522  
-0000130E                           523  *-----------------------BAD OPCODE--------------------------
-0000130E                           524  BAD_OPCODE:
-0000130E  4EF9 00001668            525              JMP      DONE
-00001314                           526  *-----------------------------------------------------------
-00001314                           527  
-00001314                           528  *------------------------OPC_0100---------------------------
-00001314                           529  * First four bits = 0100
-00001314                           530  * (NOP, NOT, MOVEM, JSR, RTS, LEA) 
-00001314                           531  *-----------------------------------------------------------
-00001314                           532  OPC_0100:
-00001314                           533  
-00001314                           534              ;Check if the opcode is NOP
-00001314  3438 107A                535              MOVE.W  opcode, D2          ;Copy opcode to D2
-00001318  B47C 4E71                536              CMP.W   #$4E71, D2          ;Check if D2 is equal to NOP (0x4E71 in hex)
-0000131C  6700 000E                537              BEQ     OPC_NOP             ;If equal branch to label to handle the opcode NOP
-00001320                           538              
-00001320                           539              ;Check if the opcode is NOT
-00001320  E082                     540              ASR.L   #8, D2 ;Shift bits to compare
-00001322  B43C 0046                541              CMP.B   #%01000110, D2
-00001326  6700 0014                542              BEQ     OPC_NOT
-0000132A                           543              
-0000132A  4282                     544              CLR.L   D2                  ;If instruction is not equal to NOP clear register and continue checks
-0000132C                           545  
-0000132C                           546  OPC_NOP:
-0000132C                           547              * Put NOP into A1 buffer for printing
-0000132C  12FC 004E                548              MOVE.B  #'N',(A1)+      
-00001330  12FC 004F                549              MOVE.B  #'O',(A1)+ 
-00001334  12FC 0050                550              MOVE.B  #'P',(A1)+ 
-00001338                           551              
-00001338  6000 FF5C                552              BRA     IDENTIFY_OPCODE
-0000133C                           553  
-0000133C                           554  
-0000133C                           555  OPC_NOT:
-0000133C                           556              * Put NOT into A1 buffer for printing
-0000133C  12FC 004E                557              MOVE.B  #'N',(A1)+ 
-00001340  12FC 004F                558              MOVE.B  #'O',(A1)+
-00001344  12FC 0054                559              MOVE.B  #'T',(A1)+
-00001348  12FC 002E                560              MOVE.B  #'.',(A1)+
-0000134C                           561              
-0000134C                           562              * Calculate Size (.b,.w.l)
-0000134C  4EB9 00001362            563              JSR     GET_NOT_SIZE
-00001352  4EB9 0000162E            564              JSR     SIZE_TO_BUFFER 
-00001358  4EB9 00001460            565              JSR     GET_EA_MODE
-0000135E  6000 FF36                566              BRA     IDENTIFY_OPCODE
-00001362                           567              
-00001362                           568  GET_NOT_SIZE:
-00001362  4282                     569              CLR.L   D2
-00001364  3438 107A                570              MOVE.W  opcode, D2
-00001368                           571  
-00001368                           572              * shift left to get rid of opTag
-00001368  123C 0008                573              MOVE.B  #8, D1
-0000136C  E36A                     574              LSL.W   D1, D2
-0000136E                           575  
-0000136E                           576              * shift right to get rid of opmode, mode, and register bits
-0000136E  123C 000E                577              MOVE.B  #14, D1
-00001372  E26A                     578              LSR.W   D1, D2
-00001374                           579  
-00001374                           580              * store in appropriate register
-00001374  1602                     581              MOVE.B  D2, D3
-00001376  4E75                     582              RTS
-00001378                           583  *-----------------------------------------------------------
-00001378                           584  
-00001378                           585  *-----------------------OPC_1001----------------------------
-00001378                           586  * First four bits = 1001
-00001378                           587  * (SUB)
-00001378                           588  *-----------------------------------------------------------
-00001378                           589  OPC_1001:
+000012E2                           492  
+000012E2                           493  
+000012E2                           494  
+000012E2                           495  *----------------------FIND OPCODE--------------------------
+000012E2                           496  * Description:
+000012E2                           497  * Finds a matching opTag (first four bits of opcode) and 
+000012E2                           498  * jumps to that opcode's encoding subroutine
+000012E2                           499  *
+000012E2                           500  * For example:
+000012E2                           501  *               ADD's first four bits = 1101, so I put
+000012E2                           502  *               CMP.B #%1101, D0
+000012E2                           503  *
+000012E2                           504  * No Parameters
+000012E2                           505  *
+000012E2                           506  * No Registers Used
+000012E2                           507  *-----------------------------------------------------------        
+000012E2                           508  FIND_OPCODE:
+000012E2  0C38 0004 107C           509              CMP.B   #%0100, opTag 
+000012E8  6700 002A                510              BEQ     opc_0100
+000012EC                           511  
+000012EC  0C38 0009 107C           512              CMP.B   #%1001, opTag
+000012F2  6700 0084                513              BEQ     opc_1001
+000012F6                           514  
+000012F6  0C38 000C 107C           515              CMP.B   #%1100, opTag
+000012FC  6700 00A8                516              BEQ     opc_1100
+00001300                           517  
+00001300  0C38 000D 107C           518              CMP.B   #%1101, opTag
+00001306  6700 00E4                519              BEQ     opc_1101
+0000130A                           520  
+0000130A                           521              * error, bad opcode
+0000130A  6000 0002                522              BRA      BAD_OPCODE
+0000130E                           523  
+0000130E                           524  *-----------------------------------------------------------
+0000130E                           525  
+0000130E                           526  *-----------------------BAD OPCODE--------------------------
+0000130E                           527  BAD_OPCODE:
+0000130E  4EF9 00001694            528              JMP      DONE
+00001314                           529  *-----------------------------------------------------------
+00001314                           530  
+00001314                           531  *---------------------------opc_0100------------------------
+00001314                           532  * First four bits = 0100
+00001314                           533  * (NOP, NOT, MOVEM, JSR, RTS, LEA) 
+00001314                           534  *-----------------------------------------------------------
+00001314                           535  opc_0100:
+00001314                           536  
+00001314                           537              ;Check if the opcode is NOP
+00001314  3438 107A                538              MOVE.W  opcode, D2 ;Copy opcode to D2
+00001318  B47C 4E71                539              CMP.W   #$4E71, D2 ;Check if D2 is equal to NOP (0x4E71 in hex)
+0000131C  6700 000E                540              BEQ     opc_nop ;If equal branch to label to handle the opcode NOP
+00001320                           541              
+00001320                           542              ;Check if the opcode is NOT
+00001320  E082                     543              ASR.L   #8, D2 ;Shift bits to compare
+00001322  B43C 0046                544              CMP.B   #%01000110, D2
+00001326  6700 0014                545              BEQ     opc_not
+0000132A                           546              
+0000132A  4282                     547              CLR.L   D2 ;If instruction is not equal to NOP clear register and continue checks
+0000132C                           548  
+0000132C                           549  opc_nop:
+0000132C                           550              * Put NOP into A1 buffer for printing
+0000132C  12FC 004E                551              MOVE.B  #'N',(A1)+      
+00001330  12FC 004F                552              MOVE.B  #'O',(A1)+ 
+00001334  12FC 0050                553              MOVE.B  #'P',(A1)+ 
+00001338                           554              
+00001338  6000 FF5C                555              BRA     IDENTIFY_OPCODE
+0000133C                           556  
+0000133C                           557  
+0000133C                           558  opc_not:
+0000133C                           559              * Put NOT into A1 buffer for printing
+0000133C  12FC 004E                560              MOVE.B  #'N',(A1)+ 
+00001340  12FC 004F                561              MOVE.B  #'O',(A1)+
+00001344  12FC 0054                562              MOVE.B  #'T',(A1)+
+00001348  12FC 002E                563              MOVE.B  #'.',(A1)+
+0000134C                           564              
+0000134C                           565              * Calculate Size (.b,.w.l)
+0000134C  4EB9 00001362            566              JSR     GET_NOT_SIZE
+00001352  4EB9 0000165A            567              JSR     SIZE_TO_BUFFER 
+00001358  4EB9 00001494            568              JSR     GET_EA_MODE
+0000135E  6000 FF36                569              BRA     IDENTIFY_OPCODE
+00001362                           570              
+00001362                           571  GET_NOT_SIZE:
+00001362  4282                     572              CLR.L   D2
+00001364  3438 107A                573              MOVE.W  opcode, D2
+00001368                           574  
+00001368                           575              * shift left to get rid of opTag
+00001368  123C 0008                576              MOVE.B  #8, D1
+0000136C  E36A                     577              LSL.W   D1, D2
+0000136E                           578  
+0000136E                           579              * shift right to get rid of opmode, mode, and register bits
+0000136E  123C 000E                580              MOVE.B  #14, D1
+00001372  E26A                     581              LSR.W   D1, D2
+00001374                           582  
+00001374                           583              * store in appropriate register
+00001374  1602                     584              MOVE.B  D2, D3
+00001376  4E75                     585              RTS
+00001378                           586  *-----------------------------------------------------------
+00001378                           587  
+00001378                           588  *---------------------------opc_1001------------------------
+00001378                           589  opc_1001:
 00001378                           590              * fill in A1 register
 00001378  12FC 0053                591              MOVE.B  #'S',(A1)+          * Put ADD into Buff
 0000137C  12FC 0055                592              MOVE.B  #'U',(A1)+
 00001380  12FC 0042                593              MOVE.B  #'B',(A1)+
 00001384  12FC 002E                594              MOVE.B  #'.',(A1)+
-00001388  6000 003E                595              BRA     PROCESS_ROEA
-0000138C                           596  *-----------------------------------------------------------
-0000138C                           597  
-0000138C                           598  *-----------------------OPC_1100----------------------------
-0000138C                           599  * First four bits = 1100
-0000138C                           600  * (AND, MULS)
-0000138C                           601  *-----------------------------------------------------------
-0000138C                           602  OPC_1100:   ; AND opcode subroutine
-0000138C                           603              
-0000138C                           604              ; check to see if bits 8-6 are 111
-0000138C                           605              ; if they are, then branch to PARSE_MULS
-0000138C                           606              ; else, keep going to parse AND
-0000138C                           607  
-0000138C                           608  OPC_AND:
-0000138C                           609              ; fill A1 with the opcode name
-0000138C  12FC 0041                610              MOVE.B  #'A',(A1)+
-00001390  12FC 004E                611              MOVE.B  #'N',(A1)+
-00001394  12FC 0044                612              MOVE.B  #'D',(A1)+
-00001398  12FC 002E                613              MOVE.B  #'.',(A1)+
-0000139C  6000 002A                614              BRA     PROCESS_ROEA
-000013A0                           615  
-000013A0                           616  OPC_MULS:
-000013A0                           617              ; load the command name into the output
-000013A0  12FC 004D                618              MOVE.B  #'M',(A1)+
-000013A4  12FC 0055                619              MOVE.B  #'U',(A1)+
-000013A8  12FC 004C                620              MOVE.B  #'L',(A1)+
-000013AC  12FC 0053                621              MOVE.B  #'S',(A1)+
-000013B0  12FC 002E                622              MOVE.B  #'.',(A1)+
-000013B4                           623  
-000013B4                           624  
-000013B4                           625  *---------------------------opc_1101------------------------
-000013B4                           626  * First four bits = 1101
-000013B4                           627  * (ADD)
-000013B4                           628  *-----------------------------------------------------------
-000013B4                           629  OPC_1101:
-000013B4                           630              * fill in A1 register
-000013B4  12FC 0041                631              MOVE.B  #'A',(A1)+          * Put ADD into Buff
-000013B8  12FC 0044                632              MOVE.B  #'D',(A1)+
-000013BC  12FC 0044                633              MOVE.B  #'D',(A1)+
-000013C0  12FC 002E                634              MOVE.B  #'.',(A1)+
-000013C4  6000 0002                635              BRA     PROCESS_ROEA        * subroutine processes everything for ADD
-000013C8                           636  
-000013C8                           637  *-----------------------------------------------------------
-000013C8                           638  
-000013C8                           639  
-000013C8                           640  
-000013C8                           641  
-000013C8                           642  
-000013C8                           643  
-000013C8                           644  
-000013C8                           645  
-000013C8                           646  
-000013C8                           647  
-000013C8                           648  *--------------Process Register->Opmode->EA-----------------
-000013C8                           649  * Description:
-000013C8                           650  * Parses bits for opcodes that share bit placements:
-000013C8                           651  * ROEA stands for Register, Opmode, and Effective Address,
-000013C8                           652  * because the opcodes below share this bit order.
-000013C8                           653  *
-000013C8                           654  * Used by: (ADD, SUB, MULS)
-000013C8                           655  *
-000013C8                           656  *-----------------------------------------------------------
-000013C8                           657  PROCESS_ROEA:
-000013C8  4EB9 00001416            658              JSR     GET_SIZE
-000013CE  4EB9 0000162E            659              JSR     SIZE_TO_BUFFER
-000013D4  4EB9 0000142C            660              JSR     OPMODE_TYPE         * 0 or 1 value (either <ea> -> Dn or Dn -> <ea>)  
-000013DA  B83C 0001                661              CMP.B   #1, D4              * is this Dn + <ea> -> <ea>?
-000013DE  6700 0006                662              BEQ     D_TO_EA
-000013E2  6600 0016                663              BNE     EA_TO_D
-000013E6                           664  
-000013E6                           665  D_TO_EA:
-000013E6  4EB9 00001440            666              JSR     GET_DATA_REG_NUM
-000013EC  12FC 002C                667              MOVE.B  #',',(A1)+
-000013F0  4EB9 00001460            668              JSR     GET_EA_MODE
-000013F6  6000 0016                669              BRA     ROEA_DONE
-000013FA                           670  
-000013FA                           671  EA_TO_D:
-000013FA  4EB9 00001460            672              JSR     GET_EA_MODE
-00001400  12FC 002C                673              MOVE.B  #',',(A1)+
-00001404  4EB9 00001440            674              JSR     GET_DATA_REG_NUM
-0000140A  6000 0002                675              BRA     ROEA_DONE
-0000140E                           676  
-0000140E                           677  ROEA_DONE:
-0000140E  12FC 0020                678              MOVE.B  #' ',(A1)+
-00001412  6000 FE82                679              BRA     IDENTIFY_OPCODE
-00001416                           680              
-00001416                           681  
-00001416                           682  GET_SIZE:
-00001416  4282                     683              CLR.L   D2
-00001418  3438 107A                684              MOVE.W  opcode ,D2          ; copy current instruction to shift
-0000141C                           685              
-0000141C                           686              * shift left to get rid of opTag
-0000141C  123C 0008                687              MOVE.B  #8, D1
-00001420  E36A                     688              LSL.W   D1, D2
-00001422                           689  
-00001422                           690              * shift right to get rid of opmode, mode, and register bits
-00001422  123C 000E                691              MOVE.B  #14, D1
-00001426  E26A                     692              LSR.W   D1, D2
-00001428                           693  
-00001428                           694              * store in appropriate register
-00001428  1602                     695              MOVE.B  D2, D3
-0000142A                           696              
-0000142A  4E75                     697              RTS
-0000142C                           698  
-0000142C                           699  OPMODE_TYPE:
-0000142C                           700              * D3 should hold the size of the opcode operation
-0000142C  4282                     701              CLR.L   D2
-0000142E  3403                     702              MOVE.W  D3, D2
-00001430                           703  
-00001430                           704              * shift left to identify
-00001430  123C 0007                705              MOVE.B  #7, D1
-00001434  E36A                     706              LSL.W   D1, D2
-00001436                           707              
-00001436                           708              * shift left to identify
-00001436  123C 000F                709              MOVE.B  #15, D1
-0000143A  E26A                     710              LSR.W   D1, D2
-0000143C                           711  
-0000143C                           712              * store in appropriate register
-0000143C  1802                     713              MOVE.B  D2, D4
-0000143E                           714  
-0000143E  4E75                     715              RTS
-00001440                           716  
-00001440                           717  GET_DATA_REG_NUM:
-00001440                           718              * D3 should hold the size of the opcode operation
-00001440  4282                     719              CLR.L   D2
-00001442  3438 107A                720              MOVE.W  opcode, D2  
-00001446                           721  
-00001446                           722              * shift left to identify
-00001446  123C 0004                723              MOVE.B  #4, D1
-0000144A  E36A                     724              LSL.W   D1, D2
-0000144C                           725              
-0000144C                           726              * shift right to isolate high register bits
-0000144C  123C 000D                727              MOVE.B  #13, D1
-00001450  E26A                     728              LSR.W   D1, D2
-00001452                           729  
-00001452                           730              * store in appropriate register
-00001452  12FC 0044                731              MOVE.B  #'D',(A1)+              * add "D" to buffer
-00001456  0602 0030                732              ADD.B   #$30,D2                   * convert data register # to hex digit
-0000145A  12C2                     733              MOVE.B  D2,(A1)+                * register # to buffer             
-0000145C  1C02                     734              MOVE.B  D2, D6
-0000145E                           735  
-0000145E  4E75                     736              RTS
-00001460                           737  
-00001460                           738  
-00001460                           739  
-00001460                           740  
-00001460                           741  
-00001460                           742  
-00001460                           743  
-00001460                           744  
-00001460                           745  
-00001460                           746  *----------------------------GET_EA_MODE------------------------
-00001460                           747  * Description:
-00001460                           748  * Evaluates the ea mode and register of an opcode 
-00001460                           749  * (usually last 6 bits of instruction format),
-00001460                           750  * and adds it to A1 to be printed out
-00001460                           751  *
-00001460                           752  * No Parameters
-00001460                           753  *
-00001460                           754  * Registers Used:
-00001460                           755  *   D1 = amount to shift the opcode
-00001460                           756  *   D2 = destination for shifts
-00001460                           757  *   D5 = addressing mode
-00001460                           758  *-----------------------------------------------------------
-00001460                           759  GET_EA_MODE:
-00001460                           760m             CLR_D_REGS
-00001470                           761              * move size of opcode to be manipulated
-00001470  4282                     762              CLR.L   D2
-00001472  3438 107A                763              MOVE.W  opcode, D2     
-00001476                           764  
-00001476                           765              * shift left to identify
-00001476  123C 000A                766              MOVE.B  #10, D1
-0000147A  E36A                     767              LSL.W   D1, D2
-0000147C                           768              
-0000147C                           769              * shift right to isolate mode bits for EA 
-0000147C  123C 000D                770              MOVE.B  #13, D1
-00001480  E26A                     771              LSR.W   D1, D2
-00001482                           772  
-00001482                           773              * store in appropriate register
-00001482  1A02                     774              MOVE.B  D2, D5
-00001484                           775              
-00001484  6000 0002                776              BRA     FIND_MODE
-00001488                           777  
-00001488                           778  *----------------------------FIND_MODE------------------------
-00001488                           779  FIND_MODE:                            
-00001488  BA3C 0000                780              CMP.B   #%0000, D5        * Direct Data Register
-0000148C  6700 003E                781              BEQ     ea_000
-00001490                           782  
-00001490  BA3C 0001                783              CMP.B   #%0001, D5        * Direct Address Register
-00001494  6700 004E                784              BEQ     ea_001
-00001498                           785  
-00001498  BA3C 0002                786              CMP.B   #%0010, D5        * Indirect Address Register
-0000149C  6700 005E                787              BEQ     ea_010
-000014A0                           788  
-000014A0  BA3C 0003                789              CMP.B   #%0011, D5        * Post Increment
-000014A4  6700 0076                790              BEQ     ea_011
-000014A8                           791  
-000014A8  BA3C 0004                792              CMP.B   #%0100, D5        * Pre Decrement
-000014AC  6700 0092                793              BEQ     ea_100
-000014B0                           794  
-000014B0  BA3C 0005                795              CMP.B   #%0101, D5        * Not necessary, go to bad ea
-000014B4  6700 00AE                796              BEQ     ea_101
-000014B8                           797  
-000014B8  BA3C 0006                798              CMP.B   #%0110, D5        * Not necessary, go to bad ea
-000014BC  6700 00AA                799              BEQ     ea_110
-000014C0                           800  
-000014C0  BA3C 0007                801              CMP.B   #%0111, D5        * Absolute or immediate address
-000014C4  6700 00A6                802              BEQ     ea_111
-000014C8                           803  
-000014C8  6000 00EC                804              BRA    INVALID_EA
-000014CC                           805  
-000014CC                           806  *----------------------------Direct Data Register------------------------
-000014CC                           807  ea_000:
-000014CC  3438 107A                808              MOVE.W      opcode, D2              * move current working word into temp storage
-000014D0  12FC 0044                809              MOVE.B      #'D',(A1)+              * add "D" to buffer
-000014D4                           810              
-000014D4  123C 000D                811              MOVE.B      #13, D1
-000014D8  E36A                     812              LSL.W       D1,D2                   * isolate register bits (last 3)
-000014DA  E26A                     813              LSR.W       D1,D2                   * D2 now holds the mode of the opcode
-000014DC  0602 0030                814              ADD.B       #$30,D2                 * convert data register # to ASCII digit
-000014E0                           815  
-000014E0  12C2                     816              MOVE.B      D2,(A1)+                * register # to buffer                  
-000014E2                           817              
-000014E2  4E75                     818              RTS                                
-000014E4                           819  
-000014E4                           820  *----------------------------Direct Address Register------------------------
-000014E4                           821  ea_001:
-000014E4  3438 107A                822              MOVE.W      opcode, D2              * move current working word into temp storage
-000014E8  12FC 0041                823              MOVE.B      #'A',(A1)+              * add "A" to buffer
-000014EC                           824              
-000014EC  123C 000D                825              MOVE.B      #13, D1
-000014F0  E36A                     826              LSL.W       D1,D2                   * isolate register bits (last 3)
-000014F2  E26A                     827              LSR.W       D1,D2                   * D2 now holds the mode of the opcode
-000014F4  0602 0030                828              ADD.B       #$30,D2                 * convert data register # to ASCII digit
-000014F8                           829  
-000014F8  12C2                     830              MOVE.B      D2,(A1)+                * register # to buffer               
-000014FA                           831                
-000014FA  4E75                     832              RTS                            
-000014FC                           833  
-000014FC                           834  *----------------------------Indirect Address Register------------------------
-000014FC                           835  ea_010:
-000014FC  3438 107A                836              MOVE.W      opcode, D2              * move current working word into temp storage
-00001500  12FC 0028                837              MOVE.B      #'(',(A1)+              * add "(" to buffer
-00001504  12FC 0041                838              MOVE.B      #'A',(A1)+              * add "A" to buffer
-00001508                           839  
-00001508  123C 000D                840              MOVE.B      #13, D1
-0000150C  E36A                     841              LSL.W       D1,D2                   * isolate register bits (last 3)
-0000150E  E26A                     842              LSR.W       D1,D2                   * D2 now holds the mode of the opcode
-00001510  0602 0030                843              ADD.B       #$30,D2                 * convert data register # to ASCII digit
-00001514  12C2                     844              MOVE.B      D2,(A1)+                * register # to buffer     
-00001516                           845  
-00001516  12FC 0029                846              MOVE.B      #')',(A1)+              * add ")" to buffer
-0000151A                           847               
-0000151A  4E75                     848              RTS                            
-0000151C                           849  
-0000151C                           850  *----------------------------Post Increment------------------------
-0000151C                           851  ea_011:
-0000151C  3438 107A                852              MOVE.W      opcode, D2              * move current working word into temp storage
-00001520                           853  
-00001520  12FC 0028                854              MOVE.B      #'(',(A1)+              * add "(" to buffer
-00001524  12FC 0041                855              MOVE.B      #'A',(A1)+              * add "A" to buffer
-00001528                           856              
-00001528  123C 000D                857              MOVE.B      #13, D1
-0000152C  E36A                     858              LSL.W       D1,D2                   * isolate register bits (last 3)
-0000152E  E26A                     859              LSR.W       D1,D2                  
-00001530  0602 0030                860              ADD.B       #$30,D2                 * convert data register # to ASCII digit
-00001534  12C2                     861              MOVE.B      D2,(A1)+                * register # to buffer     
-00001536                           862  
-00001536  12FC 0029                863              MOVE.B      #')',(A1)+              * add ")" to buffer
-0000153A  12FC 002B                864              MOVE.B      #'+',(A1)+              * add "+" to buffer
-0000153E                           865                   
-0000153E  4E75                     866              RTS                              
-00001540                           867  
-00001540                           868  *----------------------------Pre Decrement------------------------
-00001540                           869  ea_100:
-00001540  3438 107A                870              MOVE.W      opcode, D2              * move current working word into temp storage
-00001544                           871  
-00001544  12FC 002D                872              MOVE.B      #'-',(A1)+              * add "-" to buffer
-00001548  12FC 0028                873              MOVE.B      #'(',(A1)+              * add "(" to buffer
-0000154C  12FC 0041                874              MOVE.B      #'A',(A1)+              * add "A" to buffer
-00001550                           875              
-00001550  123C 000D                876              MOVE.B      #13, D1
-00001554  E36A                     877              LSL.W       D1, D2                   * isolate register bits (last 3)
-00001556  E26A                     878              LSR.W       D1, D2                   * D2 now holds the mode of the opcode
-00001558  0602 0030                879              ADD.B       #$30, D2                 * convert data register # to ASCII digit
-0000155C  12C2                     880              MOVE.B      D2, (A1)+                * register # to buffer     
-0000155E                           881  
-0000155E  12FC 0029                882              MOVE.B      #')',(A1)+               * add ")" to buffer
-00001562                           883              
-00001562  4E75                     884              RTS
-00001564                           885  
-00001564                           886  *----------------------------Not necessary, go to bad ea------------------------
-00001564                           887  ea_101:
-00001564  6000 0050                888              BRA         INVALID_EA        
-00001568                           889  
-00001568                           890  
-00001568                           891  *----------------------------Not necessary, go to bad ea------------------------
-00001568                           892  ea_110:
-00001568  6000 004C                893              BRA         INVALID_EA        
-0000156C                           894  
-0000156C                           895  
-0000156C                           896  *----------------------------Absolute or immediate address------------------------
-0000156C                           897  ea_111:
-0000156C                           898              * D405      0 0003456  23345245
-0000156C                           899              * ADD.L     $1234, D0
-0000156C                           900  
-0000156C                           901              * 8 bit value
-0000156C                           902              * 11111111
-0000156C                           903  
-0000156C                           904              * 11111011 - Direct data register would be Invalid
-0000156C                           905              * 00000100
-0000156C                           906              * 00000000 -> invalid code
-0000156C                           907  
-0000156C                           908              * and.b     #$F, Dn        ---->  10000000
-0000156C                           909              * cmp.b     #%10000000, Dn  
-0000156C                           910  
-0000156C                           911              * check against valid bits
-0000156C                           912                  * if invalid, branch to invalid opcode subroutine
-0000156C                           913                      * if the mode is 111, then go back and print out addresses
-0000156C                           914  
-0000156C  12FC 0024                915              MOVE.B      #'$', (A1)+
-00001570  3438 107A                916              MOVE.W      opcode, D2
-00001574  123C 000F                917              MOVE.B      #15, D1
-00001578  E36A                     918              LSL.W       D1, D2                   * isolate register bits (last 3)
-0000157A  E26A                     919              LSR.W       D1, D2                   * isolate register bits (last 3)
-0000157C                           920              ;ADD.B       #$30, D2                 * convert data register # to ASCII digit
-0000157C                           921  
-0000157C  B43C 0000                922              CMP.B       #%0000, D2               * compare to determine if it's a word
-00001580  6700 0012                923              BEQ         EA_WORD                 * put word address in buffer
-00001584                           924  
-00001584  B43C 0001                925              CMP.B       #%0001, D2               * compare to determine if it's a long
-00001588  6700 001A                926              BEQ         EA_LONG                 * put long address in buffer
-0000158C                           927              
-0000158C  B43C 0004                928              CMP.B       #%0100, D2
-00001590  6700 0022                929              BEQ         EA_IMMEDIATE
-00001594                           930  
-00001594                           931              * NEED TO WORK ON IMMEDIATE
-00001594                           932  
-00001594                           933  EA_WORD:
-00001594  4281                     934              CLR.L       D1
-00001596  123C 0001                935              MOVE.B      #1, D1
-0000159A  3E1A                     936              MOVE.W      (A2)+, D7
-0000159C  6100 001E                937              BSR         HEX_TO_ASCII
-000015A0  6000 0012                938              BRA         GET_EA_DONE
-000015A4                           939  
-000015A4                           940  EA_LONG:
-000015A4  4281                     941              CLR.L       D1
-000015A6  123C 0003                942              MOVE.B      #3, D1
-000015AA  2E1A                     943              MOVE.L      (A2)+, D7   
-000015AC  6100 000E                944              BSR         HEX_TO_ASCII
-000015B0  6000 0002                945              BRA         GET_EA_DONE
-000015B4                           946  
-000015B4                           947  EA_IMMEDIATE:
-000015B4                           948              * NEED TO WRITE
-000015B4                           949  
-000015B4                           950  
-000015B4                           951  GET_EA_DONE:
-000015B4  4E75                     952              RTS
-000015B6                           953  
-000015B6                           954  *------------------Invalid Effective Address----------------
-000015B6                           955  INVALID_EA:
-000015B6  4EF9 00001668            956              JMP      DONE
-000015BC                           957  *-----------------------------------------------------------
-000015BC                           958  
-000015BC                           959  
-000015BC                           960  
-000015BC                           961  
-000015BC                           962  
-000015BC                           963  
-000015BC                           964  
-000015BC                           965  
-000015BC                           966  *----------------------HEX TO ASCII-------------------------
-000015BC                           967  * Description:
-000015BC                           968  * Converts a Hex numbered address (1-9 or A-F) back to an
-000015BC                           969  * ASCII value for printing
-000015BC                           970  *
-000015BC                           971  * Parameters (if calling HEX_TO_ASCII (always used by print subroutine)):
-000015BC                           972  *   D1 = pass in 1 if the address is a word, pass in 3 if address is a long
-000015BC                           973  *   D7 = holds the original address to parse (either word or long, for example: $7000)
-000015BC                           974  *
-000015BC                           975  * Parameters (if calling NUMBER_OR_LETTER (usually done in opcode sections)):
-000015BC                           976  *   D2 = should hold value (in hex) you want to push to the buffer
-000015BC                           977  *
-000015BC                           978  * Registers Used:
-000015BC                           979  *   D0 = number of bits to remove
-000015BC                           980  *   D2 = holds either top four bits or bottom four bits of each byte in D6
-000015BC                           981  *   D3 = holds temp data
-000015BC                           982  *   D6 = holds part of address (used as temp variable)
-000015BC                           983  *   A1 = used for buffer
-000015BC                           984  *-----------------------------------------------------------
-000015BC                           985  HEX_TO_ASCII:
-000015BC  1001                     986              MOVE.B   D1, D0             * current number of bytes to remove
-000015BE  C1FC 0008                987              MULS.W   #8, D0             * number of bits to remove
-000015C2                           988  
-000015C2  2C07                     989              MOVE.L   D7, D6             * load original address to parse
-000015C4  E0AE                     990              LSR.L    D0, D6             * remove lowest byte(s)
-000015C6                           991  
-000015C6                           992              * isolate first four bits
-000015C6  1406                     993              MOVE.B   D6, D2
-000015C8  E80A                     994              LSR.B    #4, D2 
-000015CA  6100 0018                995              BSR      NUMBER_OR_LETTER
-000015CE                           996  
-000015CE                           997              * isolate second set of four bits
-000015CE  1406                     998              MOVE.B   D6, D2
-000015D0  E90A                     999              LSL.B    #4, D2 
-000015D2  E80A                    1000              LSR.B    #4, D2 
-000015D4  6100 000E               1001              BSR      NUMBER_OR_LETTER
-000015D8                          1002  
-000015D8  5301                    1003              SUB.B    #1, D1             * iterate
-000015DA  B23C 0000               1004              CMP.B    #0, D1             * done if equal
-000015DE  6D00 0036               1005              BLT      ATH_DONE
-000015E2                          1006  
-000015E2  60D8                    1007              BRA      HEX_TO_ASCII
-000015E4                          1008  
-000015E4                          1009  NUMBER_OR_LETTER:
-000015E4  1602                    1010              MOVE.B   D2, D3
-000015E6  0603 0030               1011              ADD.B    #$30, D3           
-000015EA  B63C 0039               1012              CMP.B    #$39, D3           * is byte in D2 a number?
-000015EE  6F00 0012               1013              BLE      NUMBER_TO_ASCII
-000015F2                          1014              
-000015F2  1602                    1015              MOVE.B   D2, D3
-000015F4  0603 0037               1016              ADD.B    #$37, D3           
-000015F8  B63C 0039               1017              CMP.B    #$39, D3           * is byte in D2 a letter?
-000015FC  6C00 000C               1018              BGE      LETTER_TO_ASCII
-00001600                          1019  
-00001600  60B4                    1020              BRA      INVALID_EA
-00001602                          1021  
-00001602                          1022  NUMBER_TO_ASCII:
-00001602  0602 0030               1023              ADD.B    #$30, D2           * Get the hex range from '0-9'
-00001606  6000 000A               1024              BRA      ADD_TO_BUFFER
-0000160A                          1025  
-0000160A                          1026  LETTER_TO_ASCII:
-0000160A  0602 0037               1027              ADD.B    #$37, D2           * Get the hex range from 'A-F'
-0000160E  6000 0002               1028              BRA      ADD_TO_BUFFER
-00001612                          1029  
-00001612                          1030  ADD_TO_BUFFER:
-00001612  12C3                    1031              MOVE.B   D3, (A1)+          * add part of address to buffer    
-00001614  4E75                    1032              RTS
-00001616                          1033  
-00001616                          1034  ATH_DONE:
-00001616                          1035m             CLR_D_REGS
-00001626  4E75                    1036              RTS
-00001628                          1037  *-----------------------------------------------------------
-00001628                          1038  
-00001628                          1039  INSERT_SPACE:
-00001628  12FC 0020               1040              MOVE.B  #' ',(A1)+          * add blank space to buffer
-0000162C  4E75                    1041              RTS
-0000162E                          1042  
-0000162E                          1043  
-0000162E                          1044  
-0000162E                          1045  
-0000162E                          1046  
-0000162E                          1047  
-0000162E                          1048  
-0000162E                          1049  
-0000162E                          1050  
-0000162E                          1051  *---------------------SIZE TO BUFFER------------------------
-0000162E                          1052  * Description:
-0000162E                          1053  * Evaluates the size of an opcode and adds it to A1 to be printed out
-0000162E                          1054  *
-0000162E                          1055  * Parameters:
-0000162E                          1056  *   D3 = size of opcode
-0000162E                          1057  *
-0000162E                          1058  * Registers Used:
-0000162E                          1059  *   A1: adding words/numbers to buffer
-0000162E                          1060  *-----------------------------------------------------------
-0000162E                          1061  SIZE_TO_BUFFER: 
-0000162E  B63C 0000               1062              CMP.B   #%0000,D3            
-00001632  6700 0016               1063              BEQ     BYTE_TO_BUFFER              
-00001636                          1064  
-00001636  B63C 0001               1065              CMP.B   #%0001,D3             * is this a word?
-0000163A  6700 0016               1066              BEQ     WORD_TO_BUFFER
-0000163E                          1067  
-0000163E  B63C 0002               1068              CMP.B   #%0010,D3             * is this a long?
-00001642  6700 0016               1069              BEQ     LONG_TO_BUFFER             
-00001646                          1070        
-00001646  4EF8 130E               1071              JMP     BAD_OPCODE  
-0000164A                          1072              
-0000164A                          1073  BYTE_TO_BUFFER:
-0000164A  12FC 0042               1074              MOVE.B  #'B', (A1)+           * add B to buffer
-0000164E  6000 0012               1075              BRA     STB_END             
-00001652                          1076              
-00001652                          1077  WORD_TO_BUFFER:
-00001652  12FC 0057               1078              MOVE.B  #'W', (A1)+          * add W to buffer
-00001656  6000 000A               1079              BRA     STB_END             
-0000165A                          1080  
-0000165A                          1081  LONG_TO_BUFFER:
-0000165A  12FC 004C               1082              MOVE.B  #'L',(A1)+          * add L to buffer
-0000165E  6000 0002               1083              BRA     STB_END             
-00001662                          1084  
-00001662                          1085  STB_END:
-00001662  12FC 0020               1086              MOVE.B  #' ',(A1)+          * add blank space to buffer
-00001666  4E75                    1087              RTS                         
-00001668                          1088  
-00001668                          1089  
-00001668                          1090  
-00001668                          1091  
-00001668                          1092  
-00001668                          1093  
-00001668                          1094  
-00001668                          1095  
-00001668                          1096  
-00001668                          1097  *-------------------------DONE-------------------------------
-00001668                          1098  DONE:
-00001668  4280                    1099              CLR.L     D0
-0000166A  103C 000E               1100              MOVE.B    #14, D0
-0000166E  43F8 1045               1101              LEA.L     doneMsg, A1
-00001672  4E4F                    1102              TRAP      #15
-00001674                          1103m             CLR_A_REG D0, A1
-00001678                          1104  
-00001678                          1105              END       MAIN              ; last line of source
+00001388  4EB9 0000144A            595              JSR     GET_HIGH_REG_SIZE
+0000138E  4EB9 0000165A            596              JSR     SIZE_TO_BUFFER
+00001394  4EB9 00001460            597              JSR     OPMODE_TYPE         * 0 or 1 value (either <ea> -> Dn or Dn -> <ea>)  
+0000139A  B83C 0001                598              CMP.B   #1, D4              * is this Dn + <ea> -> <ea>?
+0000139E  6700 007A                599              BEQ     D_TO_EA
+000013A2  6600 008A                600              BNE     EA_TO_D
+000013A6                           601  *-----------------------------------------------------------
+000013A6                           602  
+000013A6                           603  *---------------------------opc_1100------------------------
+000013A6                           604  opc_1100:   ; AND opcode subroutine
+000013A6                           605  
+000013A6                           606              ;-----------------------------
+000013A6                           607              ; fill A1 with the opcode name
+000013A6  12FC 0041                608              MOVE.B  #'A',(A1)+
+000013AA  12FC 004E                609              MOVE.B  #'N',(A1)+
+000013AE  12FC 0044                610              MOVE.B  #'D',(A1)+
+000013B2  12FC 002E                611              MOVE.B  #'.',(A1)+
+000013B6                           612  
+000013B6                           613  
+000013B6  4EB9 0000144A            614              JSR     GET_HIGH_REG_SIZE
+000013BC  4EB9 0000165A            615              JSR     SIZE_TO_BUFFER
+000013C2  4EB9 00001460            616              JSR     OPMODE_TYPE         * 0 or 1 value (either <ea> -> Dn or Dn -> <ea>)
+000013C8  B83C 0001                617              CMP.B   #1, D4              * is this Dn + <ea> -> <ea>
+000013CC  6700 004C                618              BEQ     D_TO_EA
+000013D0  6600 005C                619              BNE     EA_TO_D
+000013D4                           620  
+000013D4  6000 FEC0                621              BRA     IDENTIFY_OPCODE
+000013D8                           622  
+000013D8                           623  *---------------------------opc_1101------------------------
+000013D8                           624  OPC_1100_MULS:  ; MULS opcode subroutine
+000013D8                           625  
+000013D8                           626              ; load the command name into the output
+000013D8  12FC 004D                627              MOVE.B  #'M',(A1)+
+000013DC  12FC 0055                628              MOVE.B  #'U',(A1)+
+000013E0  12FC 004C                629              MOVE.B  #'L',(A1)+
+000013E4  12FC 0053                630              MOVE.B  #'S',(A1)+
+000013E8  12FC 002E                631              MOVE.B  #'.',(A1)+
+000013EC                           632  
+000013EC                           633  *---------------------------opc_1101------------------------
+000013EC                           634  * First four bits = 1101
+000013EC                           635  * (ADD)
+000013EC                           636  *-----------------------------------------------------------
+000013EC                           637  opc_1101:
+000013EC                           638              * fill in A1 register
+000013EC  12FC 0041                639              MOVE.B  #'A',(A1)+          * Put ADD into Buff
+000013F0  12FC 0044                640              MOVE.B  #'D',(A1)+
+000013F4  12FC 0044                641              MOVE.B  #'D',(A1)+
+000013F8  12FC 002E                642              MOVE.B  #'.',(A1)+
+000013FC                           643  
+000013FC  4EB9 0000144A            644              JSR     GET_HIGH_REG_SIZE
+00001402  4EB9 0000165A            645              JSR     SIZE_TO_BUFFER
+00001408  4EB9 00001460            646              JSR     OPMODE_TYPE         * 0 or 1 value (either <ea> -> Dn or Dn -> <ea>)  
+0000140E  B83C 0001                647              CMP.B   #1, D4              * is this Dn + <ea> -> <ea>?
+00001412  6700 0006                648              BEQ     D_TO_EA
+00001416  6600 0016                649              BNE     EA_TO_D
+0000141A                           650  
+0000141A                           651  D_TO_EA:
+0000141A  4EB9 00001474            652              JSR     GET_DATA_REG_NUM
+00001420  12FC 002C                653              MOVE.B  #',',(A1)+
+00001424  4EB9 00001494            654              JSR     GET_EA_MODE
+0000142A  6000 0016                655              BRA     ADD_DONE
+0000142E                           656  
+0000142E                           657  EA_TO_D:
+0000142E  4EB9 00001494            658              JSR     GET_EA_MODE
+00001434  12FC 002C                659              MOVE.B  #',',(A1)+
+00001438  4EB9 00001474            660              JSR     GET_DATA_REG_NUM
+0000143E  6000 0002                661              BRA     ADD_DONE
+00001442                           662  
+00001442                           663  ADD_DONE:
+00001442  12FC 0020                664              MOVE.B  #' ',(A1)+
+00001446  6000 FE4E                665              BRA     IDENTIFY_OPCODE
+0000144A                           666              
+0000144A                           667  
+0000144A                           668  GET_HIGH_REG_SIZE:
+0000144A  4282                     669              CLR.L   D2
+0000144C  3438 107A                670              MOVE.W  opcode ,D2          ; copy current instruction to shift
+00001450                           671              
+00001450                           672              * shift left to get rid of opTag
+00001450  123C 0008                673              MOVE.B  #8, D1
+00001454  E36A                     674              LSL.W   D1, D2
+00001456                           675  
+00001456                           676              * shift right to get rid of opmode, mode, and register bits
+00001456  123C 000E                677              MOVE.B  #14, D1
+0000145A  E26A                     678              LSR.W   D1, D2
+0000145C                           679  
+0000145C                           680              * store in appropriate register
+0000145C  1602                     681              MOVE.B  D2, D3
+0000145E                           682              
+0000145E  4E75                     683              RTS
+00001460                           684  
+00001460                           685  OPMODE_TYPE:
+00001460                           686              * D3 should hold the size of the opcode operation
+00001460  4282                     687              CLR.L   D2
+00001462  3403                     688              MOVE.W  D3, D2
+00001464                           689  
+00001464                           690              * shift left to identify
+00001464  123C 0007                691              MOVE.B  #7, D1
+00001468  E36A                     692              LSL.W   D1, D2
+0000146A                           693              
+0000146A                           694              * shift left to identify
+0000146A  123C 000F                695              MOVE.B  #15, D1
+0000146E  E26A                     696              LSR.W   D1, D2
+00001470                           697  
+00001470                           698              * store in appropriate register
+00001470  1802                     699              MOVE.B  D2, D4
+00001472                           700  
+00001472  4E75                     701              RTS
+00001474                           702  
+00001474                           703  GET_DATA_REG_NUM:
+00001474                           704              * D3 should hold the size of the opcode operation
+00001474  4282                     705              CLR.L   D2
+00001476  3438 107A                706              MOVE.W  opcode, D2  
+0000147A                           707  
+0000147A                           708              * shift left to identify
+0000147A  123C 0004                709              MOVE.B  #4, D1
+0000147E  E36A                     710              LSL.W   D1, D2
+00001480                           711              
+00001480                           712              * shift right to isolate high register bits
+00001480  123C 000D                713              MOVE.B  #13, D1
+00001484  E26A                     714              LSR.W   D1, D2
+00001486                           715  
+00001486                           716              * store in appropriate register
+00001486  12FC 0044                717              MOVE.B  #'D',(A1)+              * add "D" to buffer
+0000148A  0602 0030                718              ADD.B   #$30,D2                   * convert data register # to hex digit
+0000148E  12C2                     719              MOVE.B  D2,(A1)+                * register # to buffer             
+00001490  1C02                     720              MOVE.B  D2, D6
+00001492                           721  
+00001492  4E75                     722              RTS
+00001494                           723  *-----------------------------------------------------------
+00001494                           724  
+00001494                           725  
+00001494                           726  
+00001494                           727  
+00001494                           728  
+00001494                           729  
+00001494                           730  
+00001494                           731  
+00001494                           732  
+00001494                           733  *----------------------------GET_EA_MODE------------------------
+00001494                           734  * Description:
+00001494                           735  * Evaluates the ea mode and register of an opcode 
+00001494                           736  * (usually last 6 bits of instruction format),
+00001494                           737  * and adds it to A1 to be printed out
+00001494                           738  *
+00001494                           739  * No Parameters
+00001494                           740  *
+00001494                           741  * Registers Used:
+00001494                           742  *   D1 = amount to shift the opcode
+00001494                           743  *   D2 = destination for shifts
+00001494                           744  *   D5 = addressing mode
+00001494                           745  *-----------------------------------------------------------
+00001494                           746  GET_EA_MODE:
+00001494                           747m             CLR_D_REGS
+000014A4                           748              * move size of opcode to be manipulated
+000014A4  4282                     749              CLR.L   D2
+000014A6  3438 107A                750              MOVE.W  opcode, D2     
+000014AA                           751  
+000014AA                           752              * shift left to identify
+000014AA  123C 000A                753              MOVE.B  #10, D1
+000014AE  E36A                     754              LSL.W   D1, D2
+000014B0                           755              
+000014B0                           756              * shift right to isolate mode bits for EA 
+000014B0  123C 000D                757              MOVE.B  #13, D1
+000014B4  E26A                     758              LSR.W   D1, D2
+000014B6                           759  
+000014B6                           760              * store in appropriate register
+000014B6  1A02                     761              MOVE.B  D2, D5
+000014B8                           762              
+000014B8  6000 0002                763              BRA     FIND_MODE
+000014BC                           764  
+000014BC                           765  *----------------------------FIND_MODE------------------------
+000014BC                           766  FIND_MODE:                            
+000014BC  BA3C 0000                767              CMP.B   #%0000, D5        * Direct Data Register
+000014C0  6700 003A                768              BEQ     ea_000
+000014C4                           769  
+000014C4  BA3C 0001                770              CMP.B   #%0001, D5        * Direct Address Register
+000014C8  6700 004A                771              BEQ     ea_001
+000014CC                           772  
+000014CC  BA3C 0002                773              CMP.B   #%0010, D5        * Indirect Address Register
+000014D0  6700 005A                774              BEQ     ea_010
+000014D4                           775  
+000014D4  BA3C 0003                776              CMP.B   #%0011, D5        * Post Increment
+000014D8  6700 0072                777              BEQ     ea_011
+000014DC                           778  
+000014DC  BA3C 0004                779              CMP.B   #%0100, D5        * Pre Decrement
+000014E0  6700 008E                780              BEQ     ea_100
+000014E4                           781  
+000014E4  BA3C 0005                782              CMP.B   #%0101, D5        * Not necessary, go to bad ea
+000014E8  6700 00AA                783              BEQ     ea_101
+000014EC                           784  
+000014EC  BA3C 0006                785              CMP.B   #%0110, D5        * Not necessary, go to bad ea
+000014F0  6700 00A6                786              BEQ     ea_110
+000014F4                           787  
+000014F4  BA3C 0007                788              CMP.B   #%0111, D5        * Absolute or immediate address
+000014F8  6700 00A2                789              BEQ     ea_111
+000014FC                           790  
+000014FC                           791  *----------------------------Direct Data Register------------------------
+000014FC                           792  ea_000:
+000014FC  3438 107A                793              MOVE.W      opcode, D2              * move current working word into temp storage
+00001500  12FC 0044                794              MOVE.B      #'D',(A1)+              * add "D" to buffer
+00001504                           795              
+00001504  123C 000D                796              MOVE.B      #13, D1
+00001508  E36A                     797              LSL.W       D1,D2                   * isolate register bits (last 3)
+0000150A  E26A                     798              LSR.W       D1,D2                   * D2 now holds the mode of the opcode
+0000150C  0602 0030                799              ADD.B       #$30,D2                 * convert data register # to ASCII digit
+00001510                           800  
+00001510  12C2                     801              MOVE.B      D2,(A1)+                * register # to buffer                  
+00001512                           802              
+00001512  4E75                     803              RTS                                
+00001514                           804  
+00001514                           805  *----------------------------Direct Address Register------------------------
+00001514                           806  ea_001:
+00001514  3438 107A                807              MOVE.W      opcode, D2              * move current working word into temp storage
+00001518  12FC 0041                808              MOVE.B      #'A',(A1)+              * add "A" to buffer
+0000151C                           809              
+0000151C  123C 000D                810              MOVE.B      #13, D1
+00001520  E36A                     811              LSL.W       D1,D2                   * isolate register bits (last 3)
+00001522  E26A                     812              LSR.W       D1,D2                   * D2 now holds the mode of the opcode
+00001524  0602 0030                813              ADD.B       #$30,D2                 * convert data register # to ASCII digit
+00001528                           814  
+00001528  12C2                     815              MOVE.B      D2,(A1)+                * register # to buffer               
+0000152A                           816                
+0000152A  4E75                     817              RTS                            
+0000152C                           818  
+0000152C                           819  *----------------------------Indirect Address Register------------------------
+0000152C                           820  ea_010:
+0000152C  3438 107A                821              MOVE.W      opcode, D2              * move current working word into temp storage
+00001530  12FC 0028                822              MOVE.B      #'(',(A1)+              * add "(" to buffer
+00001534  12FC 0041                823              MOVE.B      #'A',(A1)+              * add "A" to buffer
+00001538                           824  
+00001538  123C 000D                825              MOVE.B      #13, D1
+0000153C  E36A                     826              LSL.W       D1,D2                   * isolate register bits (last 3)
+0000153E  E26A                     827              LSR.W       D1,D2                   * D2 now holds the mode of the opcode
+00001540  0602 0030                828              ADD.B       #$30,D2                 * convert data register # to ASCII digit
+00001544  12C2                     829              MOVE.B      D2,(A1)+                * register # to buffer     
+00001546                           830  
+00001546  12FC 0029                831              MOVE.B      #')',(A1)+              * add ")" to buffer
+0000154A                           832               
+0000154A  4E75                     833              RTS                            
+0000154C                           834  
+0000154C                           835  *----------------------------Post Increment------------------------
+0000154C                           836  ea_011:
+0000154C  3438 107A                837              MOVE.W      opcode, D2              * move current working word into temp storage
+00001550                           838  
+00001550  12FC 0028                839              MOVE.B      #'(',(A1)+              * add "(" to buffer
+00001554  12FC 0041                840              MOVE.B      #'A',(A1)+              * add "A" to buffer
+00001558                           841              
+00001558  123C 000D                842              MOVE.B      #13, D1
+0000155C  E36A                     843              LSL.W       D1,D2                   * isolate register bits (last 3)
+0000155E  E26A                     844              LSR.W       D1,D2                  
+00001560  0602 0030                845              ADD.B       #$30,D2                 * convert data register # to ASCII digit
+00001564  12C2                     846              MOVE.B      D2,(A1)+                * register # to buffer     
+00001566                           847  
+00001566  12FC 0029                848              MOVE.B      #')',(A1)+              * add ")" to buffer
+0000156A  12FC 002B                849              MOVE.B      #'+',(A1)+              * add "+" to buffer
+0000156E                           850                   
+0000156E  4E75                     851              RTS                              
+00001570                           852  
+00001570                           853  *----------------------------Pre Decrement------------------------
+00001570                           854  ea_100:
+00001570  3438 107A                855              MOVE.W      opcode, D2              * move current working word into temp storage
+00001574                           856  
+00001574  12FC 002D                857              MOVE.B      #'-',(A1)+              * add "-" to buffer
+00001578  12FC 0028                858              MOVE.B      #'(',(A1)+              * add "(" to buffer
+0000157C  12FC 0041                859              MOVE.B      #'A',(A1)+              * add "A" to buffer
+00001580                           860              
+00001580  123C 000D                861              MOVE.B      #13, D1
+00001584  E36A                     862              LSL.W       D1, D2                   * isolate register bits (last 3)
+00001586  E26A                     863              LSR.W       D1, D2                   * D2 now holds the mode of the opcode
+00001588  0602 0030                864              ADD.B       #$30, D2                 * convert data register # to ASCII digit
+0000158C  12C2                     865              MOVE.B      D2, (A1)+                * register # to buffer     
+0000158E                           866  
+0000158E  12FC 0029                867              MOVE.B      #')',(A1)+               * add ")" to buffer
+00001592                           868              
+00001592  4E75                     869              RTS
+00001594                           870  
+00001594                           871  *----------------------------Not necessary, go to bad ea------------------------
+00001594                           872  ea_101:
+00001594  6000 004C                873              BRA         INVALID_EA        
+00001598                           874  
+00001598                           875  
+00001598                           876  *----------------------------Not necessary, go to bad ea------------------------
+00001598                           877  ea_110:
+00001598  6000 0048                878              BRA         INVALID_EA        
+0000159C                           879  
+0000159C                           880  
+0000159C                           881  *----------------------------Absolute or immediate address------------------------
+0000159C                           882  ea_111:
+0000159C                           883              * D405      0 0003456  23345245
+0000159C                           884              * ADD.L     $1234, D0
+0000159C                           885  
+0000159C                           886              * 8 bit value
+0000159C                           887              * 11111111
+0000159C                           888  
+0000159C                           889              * 11111011 - Direct data register would be Invalid
+0000159C                           890              * 00000100
+0000159C                           891              * 00000000 -> invalid code
+0000159C                           892  
+0000159C                           893              * and.b     #$F, Dn        ---->  10000000
+0000159C                           894              * cmp.b     #%10000000, Dn  
+0000159C                           895  
+0000159C                           896              * check against valid bits
+0000159C                           897                  * if invalid, branch to invalid opcode subroutine
+0000159C                           898                      * if the mode is 111, then go back and print out addresses
+0000159C                           899  
+0000159C  12FC 0024                900              MOVE.B      #'$', (A1)+
+000015A0  123C 000F                901              MOVE.B      #15, D1
+000015A4  E36A                     902              LSL.W       D1, D2                   * isolate register bits (last 3)
+000015A6  E26A                     903              LSR.W       D1, D2                   * isolate register bits (last 3)
+000015A8                           904              ;ADD.B       #$30, D2                 * convert data register # to ASCII digit
+000015A8                           905  
+000015A8  B43C 0000                906              CMP.B       #%0000, D2               * compare to determine if it's a word
+000015AC  6700 0012                907              BEQ         EA_WORD                 * put word address in buffer
+000015B0                           908  
+000015B0  B43C 0001                909              CMP.B       #%0001, D2               * compare to determine if it's a long
+000015B4  6700 001A                910              BEQ         EA_LONG                 * put long address in buffer
+000015B8                           911              
+000015B8  B43C 0004                912              CMP.B       #%0100, D2
+000015BC  6700 002A                913              BEQ         PRINT_IMMEDIATE
+000015C0                           914  
+000015C0                           915              * NEED TO WORK ON IMMEDIATE
+000015C0                           916  
+000015C0                           917  EA_WORD:
+000015C0  4281                     918              CLR.L       D1
+000015C2  123C 0001                919              MOVE.B      #1, D1
+000015C6  3E1A                     920              MOVE.W      (A2)+, D7
+000015C8  6100 001E                921              BSR         HEX_TO_ASCII
+000015CC  6000 0012                922              BRA         GET_EA_DONE
+000015D0                           923  
+000015D0                           924  EA_LONG:
+000015D0  4281                     925              CLR.L       D1
+000015D2  123C 0003                926              MOVE.B      #3, D1
+000015D6  2E1A                     927              MOVE.L      (A2)+, D7   
+000015D8  6100 000E                928              BSR         HEX_TO_ASCII
+000015DC  6000 0002                929              BRA         GET_EA_DONE
+000015E0                           930  
+000015E0                           931  GET_EA_DONE:
+000015E0  4E75                     932              RTS
+000015E2                           933  
+000015E2                           934  *------------------Invalid Effective Address----------------
+000015E2                           935  INVALID_EA:
+000015E2  4EF9 00001694            936              JMP      DONE
+000015E8                           937  *-----------------------------------------------------------
+000015E8                           938  
+000015E8                           939  
+000015E8                           940  
+000015E8                           941  
+000015E8                           942  
+000015E8                           943  
+000015E8                           944  
+000015E8                           945  
+000015E8                           946  *----------------------HEX TO ASCII-------------------------
+000015E8                           947  * Description:
+000015E8                           948  * Converts a Hex numbered address (1-9 or A-F) back to an
+000015E8                           949  * ASCII value for printing
+000015E8                           950  *
+000015E8                           951  * Parameters (if calling HEX_TO_ASCII (always used by print subroutine)):
+000015E8                           952  *   D1 = pass in 1 if the address is a word, pass in 3 if address is a long
+000015E8                           953  *   D7 = holds the original address to parse (either word or long, for example: $7000)
+000015E8                           954  *
+000015E8                           955  * Parameters (if calling NUMBER_OR_LETTER (usually done in opcode sections)):
+000015E8                           956  *   D2 = should hold value (in hex) you want to push to the buffer
+000015E8                           957  *
+000015E8                           958  * Registers Used:
+000015E8                           959  *   D0 = number of bits to remove
+000015E8                           960  *   D2 = holds either top four bits or bottom four bits of each byte in D6
+000015E8                           961  *   D3 = holds temp data
+000015E8                           962  *   D6 = holds part of address (used as temp variable)
+000015E8                           963  *   A1 = used for buffer
+000015E8                           964  *-----------------------------------------------------------
+000015E8                           965  PRINT_IMMEDIATE:
+000015E8                           966              
+000015E8                           967  HEX_TO_ASCII:
+000015E8  1001                     968              MOVE.B   D1, D0             * current number of bytes to remove
+000015EA  C1FC 0008                969              MULS.W   #8, D0             * number of bits to remove
+000015EE                           970  
+000015EE  2C07                     971              MOVE.L   D7, D6             * load original address to parse
+000015F0  E0AE                     972              LSR.L    D0, D6             * remove lowest byte(s)
+000015F2                           973  
+000015F2                           974              * isolate first four bits
+000015F2  1406                     975              MOVE.B   D6, D2
+000015F4  E80A                     976              LSR.B    #4, D2 
+000015F6  6100 0018                977              BSR      NUMBER_OR_LETTER
+000015FA                           978  
+000015FA                           979              * isolate second set of four bits
+000015FA  1406                     980              MOVE.B   D6, D2
+000015FC  E90A                     981              LSL.B    #4, D2 
+000015FE  E80A                     982              LSR.B    #4, D2 
+00001600  6100 000E                983              BSR      NUMBER_OR_LETTER
+00001604                           984  
+00001604  5301                     985              SUB.B    #1, D1             * iterate
+00001606  B23C 0000                986              CMP.B    #0, D1             * done if equal
+0000160A  6D00 0036                987              BLT      ATH_DONE
+0000160E                           988  
+0000160E  60D8                     989              BRA      HEX_TO_ASCII
+00001610                           990  
+00001610                           991  NUMBER_OR_LETTER:
+00001610  1602                     992              MOVE.B   D2, D3
+00001612  0603 0030                993              ADD.B    #$30, D3           
+00001616  B63C 0039                994              CMP.B    #$39, D3           * is byte in D2 a number?
+0000161A  6F00 0012                995              BLE      NUMBER_TO_ASCII
+0000161E                           996              
+0000161E  1602                     997              MOVE.B   D2, D3
+00001620  0603 0037                998              ADD.B    #$37, D3           
+00001624  B63C 0039                999              CMP.B    #$39, D3           * is byte in D2 a letter?
+00001628  6C00 000C               1000              BGE      LETTER_TO_ASCII
+0000162C                          1001  
+0000162C  60B4                    1002              BRA      INVALID_EA
+0000162E                          1003  
+0000162E                          1004  NUMBER_TO_ASCII:
+0000162E  0602 0030               1005              ADD.B    #$30, D2           * Get the hex range from '0-9'
+00001632  6000 000A               1006              BRA      ADD_TO_BUFFER
+00001636                          1007  
+00001636                          1008  LETTER_TO_ASCII:
+00001636  0602 0037               1009              ADD.B    #$37, D2           * Get the hex range from 'A-F'
+0000163A  6000 0002               1010              BRA      ADD_TO_BUFFER
+0000163E                          1011  
+0000163E                          1012  ADD_TO_BUFFER:
+0000163E  12C3                    1013              MOVE.B   D3, (A1)+          * add part of address to buffer    
+00001640  4E75                    1014              RTS
+00001642                          1015  
+00001642                          1016  ATH_DONE:
+00001642                          1017m             CLR_D_REGS
+00001652  4E75                    1018              RTS
+00001654                          1019  *-----------------------------------------------------------
+00001654                          1020  
+00001654                          1021  INSERT_SPACE:
+00001654  12FC 0020               1022              MOVE.B  #' ',(A1)+          * add blank space to buffer
+00001658  4E75                    1023              RTS
+0000165A                          1024  
+0000165A                          1025  
+0000165A                          1026  
+0000165A                          1027  
+0000165A                          1028  
+0000165A                          1029  
+0000165A                          1030  
+0000165A                          1031  
+0000165A                          1032  
+0000165A                          1033  *---------------------SIZE TO BUFFER------------------------
+0000165A                          1034  * Description:
+0000165A                          1035  * Evaluates the size of an opcode and adds it to A1 to be printed out
+0000165A                          1036  *
+0000165A                          1037  * Parameters:
+0000165A                          1038  *   D3 = size of opcode
+0000165A                          1039  *
+0000165A                          1040  * Registers Used:
+0000165A                          1041  *   A1: adding words/numbers to buffer
+0000165A                          1042  *-----------------------------------------------------------
+0000165A                          1043  SIZE_TO_BUFFER: 
+0000165A  B63C 0000               1044              CMP.B   #%0000,D3            
+0000165E  6700 0016               1045              BEQ     BYTE_TO_BUFFER              
+00001662                          1046  
+00001662  B63C 0001               1047              CMP.B   #%0001,D3             * is this a word?
+00001666  6700 0016               1048              BEQ     WORD_TO_BUFFER
+0000166A                          1049  
+0000166A  B63C 0002               1050              CMP.B   #%0010,D3             * is this a long?
+0000166E  6700 0016               1051              BEQ     LONG_TO_BUFFER             
+00001672                          1052        
+00001672  4EF8 130E               1053              JMP     BAD_OPCODE  
+00001676                          1054              
+00001676                          1055  BYTE_TO_BUFFER:
+00001676  12FC 0042               1056              MOVE.B  #'B', (A1)+           * add B to buffer
+0000167A  6000 0012               1057              BRA     STB_END             
+0000167E                          1058              
+0000167E                          1059  WORD_TO_BUFFER:
+0000167E  12FC 0057               1060              MOVE.B  #'W', (A1)+          * add W to buffer
+00001682  6000 000A               1061              BRA     STB_END             
+00001686                          1062  
+00001686                          1063  LONG_TO_BUFFER:
+00001686  12FC 004C               1064              MOVE.B  #'L',(A1)+          * add L to buffer
+0000168A  6000 0002               1065              BRA     STB_END             
+0000168E                          1066  
+0000168E                          1067  STB_END:
+0000168E  12FC 0020               1068              MOVE.B  #' ',(A1)+          * add blank space to buffer
+00001692  4E75                    1069              RTS                         
+00001694                          1070  
+00001694                          1071  
+00001694                          1072  
+00001694                          1073  
+00001694                          1074  
+00001694                          1075  
+00001694                          1076  
+00001694                          1077  
+00001694                          1078  
+00001694                          1079  *-------------------------DONE-------------------------------
+00001694                          1080  DONE:
+00001694  4280                    1081              CLR.L     D0
+00001696  103C 000E               1082              MOVE.B    #14, D0
+0000169A  43F8 1045               1083              LEA.L     doneMsg, A1
+0000169E  4E4F                    1084              TRAP      #15
+000016A0                          1085m             CLR_A_REG D0, A1
+000016A4                          1086  
+000016A4                          1087              END       MAIN              ; last line of source
 
 No errors detected
 No warnings generated
@@ -1115,87 +1097,86 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-ADD_TO_BUFFER       1612
-ATH_DONE            1616
+ADD_DONE            1442
+ADD_TO_BUFFER       163E
+ATH_DONE            1642
 BADINPUT            1052
 BAD_OPCODE          130E
-BYTE_TO_BUFFER      164A
+BYTE_TO_BUFFER      1676
 CHECK_LENGTH        10FE
 CLR_A_REG           171
 CLR_D_REGS          9F
 CONVERT_TO_HEX      1130
 CR                  D
-DONE                1668
+DONE                1694
 DONEMSG             1045
-D_TO_EA             13E6
-EA_000              14CC
-EA_001              14E4
-EA_010              14FC
-EA_011              151C
-EA_100              1540
-EA_101              1564
-EA_110              1568
-EA_111              156C
-EA_IMMEDIATE        15B4
-EA_LONG             15A4
-EA_TO_D             13FA
-EA_WORD             1594
+DONE_PARSING        126E
+D_TO_EA             141A
+EA_000              14FC
+EA_001              1514
+EA_010              152C
+EA_011              154C
+EA_100              1570
+EA_101              1594
+EA_110              1598
+EA_111              159C
+EA_LONG             15D0
+EA_TO_D             142E
+EA_WORD             15C0
 ENDADDR             106E
 ENDMSG              1023
-FIND_MODE           1488
+FIND_MODE           14BC
 FIND_OPCODE         12E2
 FINISH_PRINT        1230
 GET_BITS            107E
-GET_DATA_REG_NUM    1440
-GET_EA_DONE         15B4
-GET_EA_MODE         1460
+GET_DATA_REG_NUM    1474
+GET_EA_DONE         15E0
+GET_EA_MODE         1494
 GET_END_ADDRESS     10D4
+GET_HIGH_REG_SIZE   144A
 GET_INPUT           10A8
 GET_NOT_SIZE        1362
-GET_SIZE            1416
 GET_START_ADDRESS   10BA
 GRAB_FIRST_FOUR_BITS  12D0
 GRAB_NEXT_WORD      12CA
-HEX_TO_ASCII        15BC
+HEX_TO_ASCII        15E8
 IDENTIFY_OPCODE     1296
-INSERT_SPACE        1628
-INVALID_EA          15B6
+INSERT_SPACE        1654
+INVALID_EA          15E2
 INVALID_INPUT       1112
 ITERATE             1164
-LETTER_TO_ASCII     160A
+LETTER_TO_ASCII     1636
 LETTER_TO_HEX       1156
 LF                  A
 LOAD_ADDRESSES      126E
-LONG_TO_BUFFER      165A
+LONG_TO_BUFFER      1686
 MAIN                10A0
 NEWLINE             1062
-NUMBER_OR_LETTER    15E4
-NUMBER_TO_ASCII     1602
+NUMBER_OR_LETTER    1610
+NUMBER_TO_ASCII     162E
 NUM_TO_HEX          114E
 OPCODE              107A
 OPC_0100            1314
 OPC_1001            1378
-OPC_1100            138C
-OPC_1101            13B4
-OPC_AND             138C
-OPC_MULS            13A0
+OPC_1100            13A6
+OPC_1100_MULS       13D8
+OPC_1101            13EC
 OPC_NOP             132C
 OPC_NOT             133C
-OPMODE_TYPE         142C
+OPMODE_TYPE         1460
 OPOUTPUT            1072
 OPTAG               107C
 PRINT_ADDRESS       11C2
+PRINT_IMMEDIATE     15E8
 PRINT_INSTRUCTION   1250
 PRINT_LONG          1210
 PRINT_MSG           0
 PRINT_WORD          11F0
-PROCESS_ROEA        13C8
 RESTORE_REGS        12C4
-ROEA_DONE           140E
-SIZE_TO_BUFFER      162E
+SIZE_TO_BUFFER      165A
 STARTADDR           106A
 STARTMSG            1000
-STB_END             1662
+STB_END             168E
 STORE_CHAR          115E
 STORE_END           11A2
 STORE_INPUT         1172
@@ -1203,4 +1184,4 @@ STORE_START         1182
 USERADDR            1066
 VALID               107D
 VALIDATE_INPUT      10EE
-WORD_TO_BUFFER      1652
+WORD_TO_BUFFER      167E

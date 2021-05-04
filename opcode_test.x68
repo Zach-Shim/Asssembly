@@ -8,7 +8,7 @@
 
         ORG     $7000
 MAIN:
-        AND.W   #$0010, D0
+        AND.L   #$FEAB, D6
         ADD.L   (A4)+, D6
         SUB.W   D4, D6
         SUB.L   D3, D6
@@ -20,7 +20,6 @@ MAIN:
 DONE:
 		SIMHALT             ; halt simulator
         END		MAIN        ; last line of source
-
 
 
 
