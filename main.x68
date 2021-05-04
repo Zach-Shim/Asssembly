@@ -64,9 +64,9 @@ CLR_A_REG:  MACRO
 *-----------------------------------------------------------
 * \1 should be highest bit in range
 * \2 should be lowest bit in range
-* \3 should be D4
-* SHIFT    #11, #9, D0
-* this will return bits 11 to 9 into D0
+* Result will be returned in D4
+* Example: #11, #9
+* 
 *
 * Registers:
 *   D4 = holds opcode
@@ -74,18 +74,18 @@ CLR_A_REG:  MACRO
 *   D6 = lowest bit in range 
 *   D7 = number of bits we want
 *-----------------------------------------------------------
-GET_BITS:   
+GET_BITS:   MACRO
             * Subtract value to find amount to shift by 
-            ADD.B   #11, D7          
-            SUB.B   #9, D7 
+            ADD.B   \1, D7          
+            SUB.B   \2, D7 
             ADD.B   #1, D7  * add 1 because we start our count from 0
 
             * Get high bit offset
             ADD.B   #15, D5
-            SUB.B   #11, D5
+            SUB.B   \1, D5
             
             * shift out high bits
-            MOVE.W  #$D401, D4
+            MOVE.W  opcode, D4
             LSL.W   D5, D4
             
             *get low bit offset
@@ -95,7 +95,7 @@ GET_BITS:
             
             * shift out low bits
             LSR.W   D6, D4          * isolate bits
-            RTS
+            ENDM
 
 
 *-----------------------------------------------------------
@@ -540,8 +540,15 @@ OPC_0100:
             ASR.L   #8, D2 ;Shift bits to compare
             CMP.B   #%01000110, D2
             BEQ     OPC_NOT
+            CLR.L   D2
             
-            CLR.L   D2                  ;If instruction is not equal to NOP clear register and continue checks
+            ;Check if the opcode is LEA
+            MOVE.W  opcode, D4 ;Put opcode in D4 to use the macro get bits
+            GET_BITS #8, #6 
+            CMP.B #%00000111, D4 ;if bits 6-8 are equal to 111, then the opocde is LEA
+            BEQ     OPC_LEA
+            CLR.L   D2 ;If opcode doesn't match clear appropriate registers 
+            CLR.L   D4
 
 OPC_NOP:
             * Put NOP into A1 buffer for printing
@@ -580,6 +587,14 @@ GET_NOT_SIZE:
             * store in appropriate register
             MOVE.B  D2, D3
             RTS
+
+OPC_LEA:
+            MOVE.B  #'L',(A1)+      
+            MOVE.B  #'E',(A1)+ 
+            MOVE.B  #'A',(A1)+     
+             
+
+            
 *-----------------------------------------------------------
 
 *-----------------------OPC_1001----------------------------
@@ -1103,6 +1118,7 @@ DONE:
             CLR_A_REG D0, A1
 
             END       MAIN              ; last line of source
+
 
 
 *~Font name~Courier New~

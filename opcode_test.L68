@@ -1,6 +1,6 @@
 00007000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/3/2021 7:14:34 PM
+Created On: 5/4/2021 12:38:37 PM
 
 00000000                             1  
 00000000                             2  *-----------------------------------------------------------
@@ -12,18 +12,19 @@ Created On: 5/3/2021 7:14:34 PM
 00000000                             8  
 00007000                             9          ORG     $7000
 00007000                            10  MAIN:
-00007000  C07C 0010                 11          AND.W   #$0010, D0
-00007004  DC9C                      12          ADD.L   (A4)+, D6
-00007006  9C44                      13          SUB.W   D4, D6
-00007008  9C83                      14          SUB.L   D3, D6
-0000700A                            15   
-0000700A  4685                      16          NOT.L   D5
-0000700C  4E71                      17          NOP    
-0000700E  D401                      18          ADD.B   D1, D2
-00007010  4682                      19          NOT.L   D2
-00007012                            20  DONE:
-00007012  FFFF FFFF                 21          SIMHALT             ; halt simulator
-00007016                            22          END     MAIN        ; last line of source
+00007000  43F9 00012345             11          LEA $12345,A1
+00007006                            12          ;AND.W   #$0010, D0
+00007006                            13          ;ADD.L   (A4)+, D6
+00007006                            14          ;SUB.W   D4, D6
+00007006                            15          ;SUB.L   D3, D6
+00007006                            16   
+00007006                            17          ;NOT.L   D5
+00007006                            18          ;NOP    
+00007006                            19          ;ADD.B   D1, D2
+00007006                            20          ;NOT.L   D2
+00007006                            21  DONE:
+00007006  FFFF FFFF                 22          SIMHALT             ; halt simulator
+0000700A                            23          END     MAIN        ; last line of source
 
 No errors detected
 No warnings generated
@@ -32,5 +33,5 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DONE                7012
+DONE                7006
 MAIN                7000
