@@ -5,7 +5,7 @@
 2) Pick an opcode to work on (possibly similar to the one you already made for simplicity) and try to make as much progress before thursday   
 3) Write Progress Report 2 by Thursday night
 
-## Curernt Opcode You Are Working On:
+## Current Opcode You Are Working On:
 Zach:  
 Brendan: MULS   
 Lucas:    
