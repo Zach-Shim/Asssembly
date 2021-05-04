@@ -39,4 +39,17 @@ Current Supported Opcodes
   <li> NOT </li>  
   <li> SUB </li>  
 </ul>
+
+Opcdoes that will be supported in the future:
+<ul>
+  <li> MOVE, MOVEM
+  <li> SUB
+  <li> MULS, DIVU
+  <li> LEA
+  <li> NOT
+  <li> LSL, LSR, ASL, ASR
+  <li> Bcc (BLT, BGE, BEQ) 
+  <li> JSR, RTS
+  <li> BRA
+ </ul>
 </p>
