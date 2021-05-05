@@ -40,6 +40,8 @@ Current Supported Opcodes
   <li> NOP </li>  
   <li> NOT </li>  
   <li> SUB </li>  
+  <li> MULS </li>  
+  <li> DIVU </li>  
 </ul>
 
 Opcdoes that will be supported in the future:
