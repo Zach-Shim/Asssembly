@@ -8,6 +8,7 @@
 *-----------------------------------------------------------
 * Directives:
 *-----------------------------------------------------------
+            
             ORG     $1000
 
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
@@ -389,6 +390,15 @@ PRINT_INSTRUCTION:
 
 
 
+
+
+
+
+
+
+
+
+
 *---------------------LOAD ADDRESSES------------------------
 * Description:
 * Stores INITIAL values into appropriate address registers 
@@ -607,6 +617,7 @@ OPC_NOP:
             
             BRA     IDENTIFY_OPCODE
 
+
 *-----------------------------OPC_NOT------------------------------
 
 OPC_NOT:
@@ -642,6 +653,7 @@ OPC_LEA:
             MOVE.B  #'L',(A1)+      
             MOVE.B  #'E',(A1)+ 
             MOVE.B  #'A',(A1)+     
+
 *-----------------------------------------------------------
 
 *---------------------------opc_1001------------------------
@@ -686,6 +698,7 @@ OPC_1100:
             ; check to see if bits 8-6 are 111
             ; if they are, then branch to PARSE_MULS
             ; else, keep going to parse AND
+
             GET_BITS #8, #6
             CMP.B   #%00000111, D4
             BEQ     OPC_MULS
@@ -701,7 +714,6 @@ OPC_AND:    ; AND opcode subroutine
             MOVE.B  #'N',(A1)+
             MOVE.B  #'D',(A1)+
             MOVE.B  #'.',(A1)+
-
             BRA     PROCESS_ROEA
 
 *---------------------------OPC_MULS------------------------
@@ -720,7 +732,6 @@ OPC_MULS:  * MULS opcode subroutine
             
             BRA     EA_TO_D * just the one addressing mode
 
-
 *---------------------------opc_1101------------------------
 * First four bits = 1101
 * (ADD)
@@ -734,6 +745,7 @@ OPC_1101:
             BRA     PROCESS_ROEA        * subroutine processes everything for ADD
 
 *-----------------------------------------------------------
+
 
 
 
@@ -837,7 +849,11 @@ GET_DATA_REG_NUM:
             MOVE.B  D2, D6
 
             RTS
-*-----------------------------------------------------------
+
+
+
+
+
 
 
 
@@ -1216,12 +1232,11 @@ DONE:
             * print out string
             MOVE.B    #14, D0
             TRAP      #15
+            
+            CLR_A_REG D0, A1
+
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
 
 
-*~Font name~Courier New~
-*~Font size~12~
-*~Tab type~1~
-*~Tab size~4~
