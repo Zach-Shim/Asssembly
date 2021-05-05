@@ -8,9 +8,7 @@
 *-----------------------------------------------------------
 * Directives:
 *-----------------------------------------------------------
-            ORG     $7000
-            AND.B   D1, D2
-
+            
             ORG     $1000
 
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
@@ -515,6 +513,9 @@ GRAB_FIRST_FOUR_BITS:
 FIND_OPCODE:
             CMP.B   #%0100, opTag 
             BEQ     OPC_0100
+            
+            CMP.B   #%1000, opTag
+            BEQ     OPC_1000
 
             CMP.B   #%1001, opTag
             BEQ     OPC_1001
@@ -568,24 +569,6 @@ opc_nop:
             
             BRA     IDENTIFY_OPCODE
 
-;===========================================================
-OPC_1100_MULS:  ; MULS opcode subroutine
-
-            ; load the command name into the output
-            MOVE.B  #'M',(A1)+
-            MOVE.B  #'U',(A1)+
-            MOVE.B  #'L',(A1)+
-            MOVE.B  #'S',(A1)+
-            MOVE.B  #'.',(A1)+
-            
-            ; always goes to opmode 1
-            
-; used by AND, MULS, and DIVU
-EA_SANS_AN:
-
-; only AND will use mode 2
-EA_AND_MODE_TWO:
-
             
 *-----------------------------------------------------------
 
@@ -628,6 +611,29 @@ OPC_LEA:
 *-----------------------------------------------------------
 
 *---------------------------opc_1001------------------------
+
+OPC_1000:   * keeping this in case there's more that start with 1000
+            BRA     OPC_DIVU
+            
+OPC_DIVU:
+            MOVE.B  #'D',(A1)+
+            MOVE.B  #'I',(A1)+
+            MOVE.B  #'V',(A1)+
+            MOVE.B  #'U',(A1)+
+            MOVE.B  #'.',(A1)+
+            MOVE.B  #'W',(A1)+  * always size word
+            MOVE.B  #' ',(A1)+
+            
+            * set the valid bits (since there's only one adressing mode)
+            MOVE.B  #%10111111, valid
+            
+            BRA     EA_TO_D
+
+*-----------------------------------------------------------
+
+
+
+*---------------------------opc_1001------------------------
 opc_1001:
             * fill in A1 register
             MOVE.B  #'S',(A1)+          * Put ADD into Buff
@@ -643,7 +649,15 @@ opc_1001:
 *-----------------------------------------------------------
 
 *---------------------------opc_1100------------------------
-opc_1100:   ; AND opcode subroutine
+opc_1100:   ; calls either OPC_AND or OPC_MULS (adding invalid option later)
+            ; if bits 6-8 are all set, then the opcode is MULS, otherwise it's AND
+            GET_BITS #8, #6
+            CMP.B   #%00000111, D4
+            BEQ     OPC_MULS
+            BNE     OPC_AND
+
+
+OPC_AND:    ; AND opcode subroutine
 
             ;-----------------------------
             ; fill A1 with the opcode name
@@ -652,25 +666,32 @@ opc_1100:   ; AND opcode subroutine
             MOVE.B  #'D',(A1)+
             MOVE.B  #'.',(A1)+
 
-
             JSR     GET_HIGH_REG_SIZE
             JSR     SIZE_TO_BUFFER
             JSR     OPMODE_TYPE         * 0 or 1 value (either <ea> -> Dn or Dn -> <ea>)
             CMP.B   #1, D4              * is this Dn + <ea> -> <ea>
             BEQ     D_TO_EA
             BNE     EA_TO_D
+            
+            ; set valid bits somewhere
 
             BRA     IDENTIFY_OPCODE
 
 *---------------------------opc_1101------------------------
-OPC_1100_MULS:  ; MULS opcode subroutine
+OPC_MULS:  * MULS opcode subroutine
 
-            ; load the command name into the output
+            * load the command name into the output
             MOVE.B  #'M',(A1)+
             MOVE.B  #'U',(A1)+
             MOVE.B  #'L',(A1)+
             MOVE.B  #'S',(A1)+
             MOVE.B  #'.',(A1)+
+            MOVE.B  #'W',(A1)+ * always size word
+            MOVE.B  #' ',(A1)+
+            
+            MOVE.B  #%10111111, valid   * set the valid mode bits (to be used later)
+            
+            BRA     EA_TO_D * just the one addressing mode
 
 *---------------------------opc_1101------------------------
 * First four bits = 1101
@@ -682,7 +703,7 @@ OPC_1101:
             MOVE.B  #'D',(A1)+
             MOVE.B  #'D',(A1)+
             MOVE.B  #'.',(A1)+
-            BRA     PROCESS_ROEA        * subroutine processes everything for ADD
+            ;BRA     PROCESS_ROEA        * subroutine processes everything for ADD
 
             JSR     GET_HIGH_REG_SIZE
             JSR     SIZE_TO_BUFFER
@@ -1136,16 +1157,10 @@ DONE:
             LEA.L     doneMsg, A1
             TRAP      #15
             
-            ; TESTING
-            ; print out the command
-            MOVE.B  #00,(A1)+ ; add the null
-            MOVE.L  #$00000000,A1
-            MOVE.B  #13,D0
-            TRAP    #15
-            
             CLR_A_REG D0, A1
 
             END       MAIN              ; last line of source
+
 
 *~Font name~Courier New~
 *~Font size~12~

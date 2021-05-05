@@ -23,7 +23,9 @@ In GET_EA_MODE <br>
 opcode        -(An), <ea>            <--- still not tested   
 opcode        (xxx).W, <ea>          <--- have been lightly tested and should work with current test file   
 opcode        (xxx).L, <ea>          <--- have been lightly tested and should work with current test file  
-opcode        immediate, <ea>        <--- this one is not implemented yet    
+opcode        immediate, <ea>        <--- this one is not implemented yet   
+
+Post-increment doesn't seem to be working if used after other addressing modes
 
 I also haven't tested with loading in data from opcode_test with a starting/ending address above a Word (right now I've been testing with $7000)  
 </p>

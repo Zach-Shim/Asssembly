@@ -1,8 +1,8 @@
 00007000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/4/2021 12:38:37 PM
+Created On: 5/4/2021 7:08:46 PM
 
-00000000                             1          
+00000000                             1  
 00000000                             2  *-----------------------------------------------------------
 00000000                             3  * Title      :Testing File
 00000000                             4  * Written by :Lucas Buckeye, Brendan Hurt, Zach Shim
@@ -13,18 +13,19 @@ Created On: 5/4/2021 12:38:37 PM
 00007000                             9          ORG     $7000
 00007000                            10  MAIN:
 00007000  43F9 00012345             11          LEA $12345,A1
-00007006                            12          ;AND.W   #$0010, D0
-00007006                            13          ;ADD.L   (A4)+, D6
-00007006                            14          ;SUB.W   D4, D6
-00007006                            15          ;SUB.L   D3, D6
-00007006                            16   
-00007006                            17          ;NOT.L   D5
-00007006                            18          ;NOP    
-00007006                            19          ;ADD.B   D1, D2
-00007006                            20          ;NOT.L   D2
-00007006                            21  DONE:
-00007006  FFFF FFFF                 22          SIMHALT             ; halt simulator
-0000700A                            23          END     MAIN        ; last line of source
+00007006  C3FC 007B                 12          MULS.W  #123, D1
+0000700A                            13          ;AND.W   #$0010, D0
+0000700A                            14          ;ADD.L   (A4)+, D6
+0000700A                            15          ;SUB.W   D4, D6
+0000700A                            16          ;SUB.L   D3, D6
+0000700A                            17   
+0000700A                            18          ;NOT.L   D5
+0000700A                            19          ;NOP    
+0000700A                            20          ;ADD.B   D1, D2
+0000700A                            21          ;NOT.L   D2
+0000700A                            22  DONE:
+0000700A  FFFF FFFF                 23          SIMHALT             ; halt simulator
+0000700E                            24          END     MAIN        ; last line of source
 
 No errors detected
 No warnings generated
@@ -33,5 +34,5 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DONE                7006
+DONE                700A
 MAIN                7000
