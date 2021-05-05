@@ -650,9 +650,19 @@ GET_NOT_SIZE:
             RTS
 
 OPC_LEA:
+           * Put LEA into A1 buffer for printing
             MOVE.B  #'L',(A1)+      
             MOVE.B  #'E',(A1)+ 
-            MOVE.B  #'A',(A1)+     
+            MOVE.B  #'A',(A1)+
+            MOVE.B  #'.',(A1)+ 
+            MOVE.B  #'L',(A1)+ 
+            JSR INSERT_SPACE
+                    
+            JSR GET_EA_MODE
+            MOVE.B  #',',(A1)+ 
+            JSR INSERT_SPACE
+            JSR GET_DATA_REG_NUM
+            BRA IDENTIFY_OPCODE    
 
 *-----------------------------------------------------------
 
@@ -1240,3 +1250,8 @@ DONE:
 *-----------------------------------------------------------
 
 
+
+*~Font name~Courier New~
+*~Font size~12~
+*~Tab type~0~
+*~Tab size~4~

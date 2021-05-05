@@ -1,31 +1,49 @@
-00007000 Starting Address
+00007002 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/4/2021 7:08:46 PM
+Created On: 5/5/2021 4:50:57 PM
 
-00000000                             1  
-00000000                             2  *-----------------------------------------------------------
-00000000                             3  * Title      :Testing File
-00000000                             4  * Written by :Lucas Buckeye, Brendan Hurt, Zach Shim
-00000000                             5  * Date       :4.19.21
-00000000                             6  * Description:v1.2
-00000000                             7  *-----------------------------------------------------------
-00000000                             8  
-00007000                             9          ORG     $7000
-00007000                            10  MAIN:
-00007000  43F9 00012345             11          LEA $12345,A1
-00007006  C3FC 007B                 12          MULS.W  #123, D1
-0000700A                            13          ;AND.W   #$0010, D0
-0000700A                            14          ;ADD.L   (A4)+, D6
-0000700A                            15          ;SUB.W   D4, D6
-0000700A                            16          ;SUB.L   D3, D6
-0000700A                            17   
-0000700A                            18          ;NOT.L   D5
-0000700A                            19          ;NOP    
-0000700A                            20          ;ADD.B   D1, D2
-0000700A                            21          ;NOT.L   D2
-0000700A                            22  DONE:
-0000700A  FFFF FFFF                 23          SIMHALT             ; halt simulator
-0000700E                            24          END     MAIN        ; last line of source
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      :Testing File
+00000000                             3  * Written by :Lucas Buckeye, Brendan Hurt, Zach Shim
+00000000                             4  * Date       :4.19.21
+00000000                             5  * Description:v1.2
+00000000                             6  *-----------------------------------------------------------
+00000000                             7  
+00007000                             8          ORG     $7000
+00007000                             9  
+00007000= 01                        10  x:      DC.B    1
+00007001= 05                        11  y:      DC.B    5
+00007002  =0000A8C0                 12  z:      EQU     $A8C0
+00007002                            13  
+00007002                            14  
+00007002                            15  MAIN:
+00007002  47F8 1234                 16          LEA     $1234, A3
+00007006  0686 00123456             17          ADD.L   #$123456, D6
+0000700C  0646 1234                 18          ADD.W   #$1234, D6
+00007010  0606 0034                 19          ADD.B   #$34, D6
+00007014  DC38 7000                 20          ADD.B   x, D6
+00007018  0646 A8C0                 21          ADD.W   #z, D6
+0000701C                            22  
+0000701C  D79C                      23          ADD.L   D3, (A4)+
+0000701E  D69C                      24          ADD.L   (A4)+, D3
+00007020  D8A4                      25          ADD.L   -(A4), D4
+00007022  D9A4                      26          ADD.L   D4, -(A4)
+00007024  DAB9 0000ABCD             27          ADD.L   $ABCD, D5
+0000702A  DB79 ABCDEF12             28          ADD.W   D5, $ABCDEF12
+00007030  D401                      29          ADD.B   D1, D2
+00007032                            30  
+00007032  9C44                      31          SUB.W   D4, D6
+00007034  9C83                      32          SUB.L   D3, D6
+00007036                            33  
+00007036  C0BC 00000010             34          AND.L   #$0010, D0
+0000703C  C079 00AE437B             35          AND.W   $AE437B, D0
+00007042                            36  
+00007042  4685                      37          NOT.L   D5
+00007044  4E71                      38          NOP    
+00007046  4682                      39          NOT.L   D2
+00007048                            40  DONE:
+00007048  FFFF FFFF                 41              SIMHALT             ; halt simulator
+0000704C                            42          END MAIN        ; last line of source
 
 No errors detected
 No warnings generated
@@ -34,5 +52,8 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DONE                700A
-MAIN                7000
+DONE                7048
+MAIN                7002
+X                   7000
+Y                   7001
+Z                   A8C0
