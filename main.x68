@@ -264,15 +264,6 @@ STORE_INPUT:
 STORE_START:
             MOVE.L     D3, D6
             ADD.B      #1, D4               ; value to indicate if we are done parsing
-            ;CLR        D3
-            ;BRA       VALIDATE_INPUT       ; UNCOMMENT WHEN TAKING OUT TEST CODE BELOW
-
-            ; USED FOR TESTING - MAKE SURE OUTPUT IS CORRECT
-            CLR.L       D1
-            MOVE.L      D3, D1   
-            MOVE.B      #3, D0     
-            TRAP        #15
-            PRINT_MSG   newline
             
             CLR         D3
             BRA         VALIDATE_INPUT
@@ -280,15 +271,6 @@ STORE_START:
 STORE_END:
             MOVE.L     D3, D7
             ADD.B      #1, D4               ; value to indicate if we are done parsing
-            ;CLR        D3
-            ;BRA       VALIDATE_INPUT       ; UNCOMMENT WHEN TAKING OUT TEST CODE BELOW
-
-            ; USED FOR TESTING - MAKE SURE OUTPUT IS CORRECT
-            CLR.L       D1
-            MOVE.L      D3, D1   
-            MOVE.B      #3, D0     
-            TRAP        #15
-            PRINT_MSG   newline
 
             CLR         D3
             BRA         VALIDATE_INPUT
@@ -662,7 +644,9 @@ OPC_LEA:
             MOVE.B  #',',(A1)+ 
             JSR INSERT_SPACE
             JSR GET_DATA_REG_NUM
-            BRA IDENTIFY_OPCODE  
+
+            BRA IDENTIFY_OPCODE    
+
 
 *-----------------------------------------------------------
 
@@ -1248,3 +1232,4 @@ DONE:
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
+
