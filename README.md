@@ -6,7 +6,7 @@
 3) Write Progress Report 2 by Thursday night
 
 ## Current Opcode You Are Working On:
-Zach:  
+Zach: JSR, RTS
 Brendan: MULS   
 Lucas: LEA
 
