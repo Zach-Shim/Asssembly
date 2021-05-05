@@ -264,15 +264,6 @@ STORE_INPUT:
 STORE_START:
             MOVE.L     D3, D6
             ADD.B      #1, D4               ; value to indicate if we are done parsing
-            ;CLR        D3
-            ;BRA       VALIDATE_INPUT       ; UNCOMMENT WHEN TAKING OUT TEST CODE BELOW
-
-            ; USED FOR TESTING - MAKE SURE OUTPUT IS CORRECT
-            CLR.L       D1
-            MOVE.L      D3, D1   
-            MOVE.B      #3, D0     
-            TRAP        #15
-            PRINT_MSG   newline
             
             CLR         D3
             BRA         VALIDATE_INPUT
@@ -280,15 +271,6 @@ STORE_START:
 STORE_END:
             MOVE.L     D3, D7
             ADD.B      #1, D4               ; value to indicate if we are done parsing
-            ;CLR        D3
-            ;BRA       VALIDATE_INPUT       ; UNCOMMENT WHEN TAKING OUT TEST CODE BELOW
-
-            ; USED FOR TESTING - MAKE SURE OUTPUT IS CORRECT
-            CLR.L       D1
-            MOVE.L      D3, D1   
-            MOVE.B      #3, D0     
-            TRAP        #15
-            PRINT_MSG   newline
 
             CLR         D3
             BRA         VALIDATE_INPUT
@@ -600,11 +582,11 @@ OPC_0100:
             CLR.L   D2
             
             ;Check if the opcode is LEA
-            MOVE.W  opcode, D4 ;Put opcode in D4 to use the macro get bits
+            MOVE.W   opcode, D4          ;Put opcode in D4 to use the macro get bits
             GET_BITS #8, #6 
-            CMP.B #%00000111, D4 ;if bits 6-8 are equal to 111, then the opocde is LEA
+            CMP.B   #%00000111, D4       ;if bits 6-8 are equal to 111, then the opocde is LEA
             BEQ     OPC_LEA
-            CLR.L   D2 ;If opcode doesn't match clear appropriate registers 
+            CLR.L   D2                   ;If opcode doesn't match clear appropriate registers 
             CLR.L   D4
 
 *---------------------------OPC_NOP--------------------------------
@@ -662,7 +644,9 @@ OPC_LEA:
             MOVE.B  #',',(A1)+ 
             JSR INSERT_SPACE
             JSR GET_DATA_REG_NUM
+
             BRA IDENTIFY_OPCODE    
+
 
 *-----------------------------------------------------------
 
@@ -1249,9 +1233,3 @@ DONE:
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
 
-
-
-*~Font name~Courier New~
-*~Font size~12~
-*~Tab type~0~
-*~Tab size~4~
