@@ -1,11 +1,18 @@
 # Disassembler or DASM FOR SHORT
+
+## TODO List for this week:
+1) Integrating GET_BITS to current (and future) opcodes   
+2) Pick an opcode to work on (possibly similar to the one you already made for simplicity) and try to make as much progress before thursday   
+3) Write Progress Report 2 by Thursday night
+
+## Current Opcode You Are Working On:
+Zach: JSR, RTS  
+Brendan: MULS   
+Lucas: LEA
+
 ## Rundown:
 <p>
- <ul>
-<li>Zach Carrying the team </li>
-<li>Brendan is helping Lucas Keep his sanity. </li> 
-<li>Lucas is just trying to survive and figure out how to use Github </li>
-</ul>
+Combined ADD, SUB, and AND subroutines into one function, since all of them share the same bit placements. So those are all done (haven't tested all addressing modes though).
 </p>
 
 ## Known Issues: 
@@ -13,22 +20,39 @@
 I still have yet to test: <br>
 
 In GET_EA_MODE <br>
-opcode      -(An), <ea>  
-opcode        (xxx).W, <ea>   
-opcode        (xxx).L, <ea>  
+opcode        -(An), <ea>            <--- still not tested   
+opcode        (xxx).W, <ea>          <--- have been lightly tested and should work with current test file   
+opcode        (xxx).L, <ea>          <--- have been lightly tested and should work with current test file  
 opcode        immediate, <ea>        <--- this one is not implemented yet   
 
-I also haven't tested with loading in data from opcode_test with a starting/ending address  above a Word (right now I've been testing with $7000)  
+Post-increment doesn't seem to be working if used after other addressing modes
 
-And i think that's it for now off the top of my head, let me know if theres anything else breaks and I will try to fix it. Also let me know if something is unclear so I can document it better. Don't be afraid to add helper functions or change my code cause as you guys see its not that great lol. Thanks again <br>
+I also haven't tested with loading in data from opcode_test with a starting/ending address above a Word (right now I've been testing with $7000)  
 </p>
 
-## Features
+
+## Features:
 <p>
-Current Supported Opcodes 
+Current Supported Opcodes  
 <ul>
-  <li> ADD </li>
-  <li> NOP </li>
-  <li> NOT </li>
+  <li> ADD </li>  
+  <li> AND </li>  
+  <li> NOP </li>  
+  <li> NOT </li>  
+  <li> SUB </li>  
+  <li> MULS </li>  
+  <li> DIVU </li>  
 </ul>
+
+Opcdoes that will be supported in the future:
+<ul>
+  <li> MOVE, MOVEM
+  <li> MULS, DIVU
+  <li> LEA
+  <li> NOT
+  <li> LSL, LSR, ASL, ASR
+  <li> Bcc (BLT, BGE, BEQ) 
+  <li> JSR, RTS
+  <li> BRA
+ </ul>
 </p>
