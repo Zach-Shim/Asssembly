@@ -600,11 +600,11 @@ OPC_0100:
             CLR.L   D2
             
             ;Check if the opcode is LEA
-            MOVE.W  opcode, D4 ;Put opcode in D4 to use the macro get bits
+            MOVE.W   opcode, D4          ;Put opcode in D4 to use the macro get bits
             GET_BITS #8, #6 
-            CMP.B #%00000111, D4 ;if bits 6-8 are equal to 111, then the opocde is LEA
+            CMP.B   #%00000111, D4       ;if bits 6-8 are equal to 111, then the opocde is LEA
             BEQ     OPC_LEA
-            CLR.L   D2 ;If opcode doesn't match clear appropriate registers 
+            CLR.L   D2                   ;If opcode doesn't match clear appropriate registers 
             CLR.L   D4
 
 *---------------------------OPC_NOP--------------------------------
@@ -650,9 +650,19 @@ GET_NOT_SIZE:
             RTS
 
 OPC_LEA:
+           * Put LEA into A1 buffer for printing
             MOVE.B  #'L',(A1)+      
             MOVE.B  #'E',(A1)+ 
-            MOVE.B  #'A',(A1)+     
+            MOVE.B  #'A',(A1)+
+            MOVE.B  #'.',(A1)+ 
+            MOVE.B  #'L',(A1)+ 
+            JSR INSERT_SPACE
+                    
+            JSR GET_EA_MODE
+            MOVE.B  #',',(A1)+ 
+            JSR INSERT_SPACE
+            JSR GET_DATA_REG_NUM
+            BRA IDENTIFY_OPCODE  
 
 *-----------------------------------------------------------
 
