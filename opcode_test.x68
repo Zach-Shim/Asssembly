@@ -9,6 +9,7 @@
         ORG     $7000
 MAIN:
         LEA $12345,A1
+        MULS.W  #123, D1
         ;AND.W   #$0010, D0
         ;ADD.L   (A4)+, D6
         ;SUB.W   D4, D6
@@ -21,10 +22,6 @@ MAIN:
 DONE:
 		SIMHALT             ; halt simulator
         END		MAIN        ; last line of source
-
-
-
-
 
 
 
