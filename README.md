@@ -8,7 +8,7 @@
 ## Current Opcode You Are Working On:
 Zach: JSR, RTS  
 Brendan: MULS   
-Lucas: LEA
+Lucas: Bcc
 
 ## Rundown:
 <p>
