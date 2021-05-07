@@ -1,6 +1,6 @@
-00007002 Starting Address
+00007004 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/5/2021 4:50:57 PM
+Created On: 5/7/2021 1:23:58 AM
 
 00000000                             1  *-----------------------------------------------------------
 00000000                             2  * Title      :Testing File
@@ -15,35 +15,62 @@ Created On: 5/5/2021 4:50:57 PM
 00007001= 05                        11  y:      DC.B    5
 00007002  =0000A8C0                 12  z:      EQU     $A8C0
 00007002                            13  
-00007002                            14  
-00007002                            15  MAIN:
-00007002  47F8 1234                 16          LEA     $1234, A3
-00007006  0686 00123456             17          ADD.L   #$123456, D6
-0000700C  0646 1234                 18          ADD.W   #$1234, D6
-00007010  0606 0034                 19          ADD.B   #$34, D6
-00007014  DC38 7000                 20          ADD.B   x, D6
-00007018  0646 A8C0                 21          ADD.W   #z, D6
-0000701C                            22  
-0000701C  D79C                      23          ADD.L   D3, (A4)+
-0000701E  D69C                      24          ADD.L   (A4)+, D3
-00007020  D8A4                      25          ADD.L   -(A4), D4
-00007022  D9A4                      26          ADD.L   D4, -(A4)
-00007024  DAB9 0000ABCD             27          ADD.L   $ABCD, D5
-0000702A  DB79 ABCDEF12             28          ADD.W   D5, $ABCDEF12
-00007030  D401                      29          ADD.B   D1, D2
-00007032                            30  
-00007032  9C44                      31          SUB.W   D4, D6
-00007034  9C83                      32          SUB.L   D3, D6
-00007036                            33  
-00007036  C0BC 00000010             34          AND.L   #$0010, D0
-0000703C  C079 00AE437B             35          AND.W   $AE437B, D0
-00007042                            36  
-00007042  4685                      37          NOT.L   D5
-00007044  4E71                      38          NOP    
-00007046  4682                      39          NOT.L   D2
-00007048                            40  DONE:
-00007048  FFFF FFFF                 41              SIMHALT             ; halt simulator
-0000704C                            42          END MAIN        ; last line of source
+00007002                            14  TEST_JSR_1:
+00007002  4E75                      15          RTS
+00007004                            16  
+00007004                            17  MAIN:
+00007004                            18          ;MULS.W  #$0010, D0
+00007004                            19          ;MULS.W   D0, D1
+00007004                            20          ;MULS.L  $123456, D1
+00007004                            21  
+00007004  47F8 1234                 22          LEA     $1234, A3
+00007008                            23  
+00007008  4EB9 00007082             24          JSR     DONE
+0000700E                            25  
+0000700E  5600                      26          ADD.B   #3, D0
+00007010  0686 00123456             27          ADD.L   #$123456, D6
+00007016  0646 1234                 28          ADD.W   #$1234, D6
+0000701A  0606 0034                 29          ADD.B   #$34, D6
+0000701E  DC38 7000                 30          ADD.B   x, D6
+00007022  0646 A8C0                 31          ADD.W   #z, D6
+00007026  D79C                      32          ADD.L   D3, (A4)+
+00007028  D69C                      33          ADD.L   (A4)+, D3
+0000702A  D8A4                      34          ADD.L   -(A4), D4
+0000702C  D9A4                      35          ADD.L   D4, -(A4)
+0000702E  DAB9 0000ABCD             36          ADD.L   $ABCD, D5
+00007034  DB79 ABCDEF12             37          ADD.W   D5, $ABCDEF12
+0000703A  D401                      38          ADD.B   D1, D2
+0000703C                            39  
+0000703C  5702                      40          SUB.B   #3, D2
+0000703E  0486 00123456             41          SUB.L   #$123456, D6
+00007044  0446 1234                 42          SUB.W   #$1234, D6
+00007048  0406 0034                 43          SUB.B   #$34, D6
+0000704C  9C38 7000                 44          SUB.B   x, D6
+00007050  0446 A8C0                 45          SUB.W   #z, D6
+00007054  979C                      46          SUB.L   D3, (A4)+
+00007056  969C                      47          SUB.L   (A4)+, D3
+00007058  98A4                      48          SUB.L   -(A4), D4
+0000705A  99A4                      49          SUB.L   D4, -(A4)
+0000705C  9AB9 0000ABCD             50          SUB.L   $ABCD, D5
+00007062  9B79 ABCDEF12             51          SUB.W   D5, $ABCDEF12
+00007068  9401                      52          SUB.B   D1, D2
+0000706A                            53  
+0000706A  C0BC 00000010             54          AND.L   #$0010, D0
+00007070  C079 00AE437B             55          AND.W   $AE437B, D0
+00007076  C041                      56          AND.W   D1, D0
+00007078  C081                      57          AND.L   D1, D0
+0000707A                            58  
+0000707A  4685                      59          NOT.L   D5
+0000707C  4682                      60          NOT.L   D2
+0000707E                            61  
+0000707E  4E71                      62          NOP    
+00007080                            63  
+00007080                            64  TEST_JSR_2:
+00007080  4E75                      65          RTS
+00007082                            66  
+00007082                            67  DONE:
+00007082  FFFF FFFF                 68          SIMHALT             ; halt simulator
+00007086                            69          END     MAIN        ; last line of source
 
 No errors detected
 No warnings generated
@@ -52,8 +79,10 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DONE                7048
-MAIN                7002
+DONE                7082
+MAIN                7004
+TEST_JSR_1          7002
+TEST_JSR_2          7080
 X                   7000
 Y                   7001
 Z                   A8C0
