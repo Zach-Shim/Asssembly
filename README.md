@@ -1,33 +1,27 @@
 # Disassembler or DASM FOR SHORT
 
 ## TODO List for this week:
-1) Integrating GET_BITS to current (and future) opcodes   
-2) Pick an opcode to work on (possibly similar to the one you already made for simplicity) and try to make as much progress before thursday   
-3) Write Progress Report 2 by Thursday night
+TBD
 
 ## Current Opcode You Are Working On:
-Zach: JSR, RTS  
+Zach:    MOVE   
 Brendan: MULS   
-Lucas: Bcc
+Lucas:   Bcc  
 
-## Rundown:
+## Updates:
 <p>
-Combined ADD, SUB, and AND subroutines into one function, since all of them share the same bit placements. So those are all done (haven't tested all addressing modes though).
+JSR and RTS are done. All tests seem to be passing for now.
+There were a couple bugs with ADD and SUB, so I added a few more subroutines that require calling ADDI, SUBI, ADDQ, and SUBQ. All tests seem to be passing for now.
+Tested immediate data for MULS and it doesn't seem to be working. The current routine that it is performing is that it will always print out a longword for immediate data. Also sill need to test DIVS.
 </p>
 
 ## Known Issues: 
 <p>
-I still have yet to test: <br>
+Tested immediate data for MULS and it doesn't seem to be working.        
+It calls a subroutine which in the end, will basically print out a longword every time there is an immediate data addressing mode called, which causes problems with parsing.     
+Also sill need to test DIVS.   
 
-In GET_EA_MODE <br>
-opcode        -(An), <ea>            <--- still not tested   
-opcode        (xxx).W, <ea>          <--- have been lightly tested and should work with current test file   
-opcode        (xxx).L, <ea>          <--- have been lightly tested and should work with current test file  
-opcode        immediate, <ea>        <--- this one is not implemented yet   
-
-Post-increment doesn't seem to be working if used after other addressing modes
-
-I also haven't tested with loading in data from opcode_test with a starting/ending address above a Word (right now I've been testing with $7000)  
+Haven't tested with loading in data from opcode_test with a starting/ending address above a Word (right now I've been testing with $7000)  
 </p>
 
 
@@ -40,6 +34,13 @@ Current Supported Opcodes
   <li> NOP </li>  
   <li> NOT </li>  
   <li> SUB </li>  
+  <li> RTS </li>  
+  <li> JSR </li>  
+</ul>
+
+<p>
+Need Further Testing
+<ul>
   <li> MULS </li>  
   <li> DIVU </li>  
 </ul>
