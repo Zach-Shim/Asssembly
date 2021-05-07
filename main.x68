@@ -707,7 +707,7 @@ OPC_LEA:
             JSR GET_DATA_REG_NUM
 
             BRA IDENTIFY_OPCODE    
-            
+
 
 *-----------------------------------------------------------
 

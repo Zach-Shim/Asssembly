@@ -6,7 +6,7 @@ TBD
 ## Current Opcode You Are Working On:
 Zach:    TBD    
 Brendan: MULS   
-Lucas:   LEA    
+Lucas: Bcc
 
 ## Updates:
 <p>
