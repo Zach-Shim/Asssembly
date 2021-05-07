@@ -4,9 +4,9 @@
 TBD
 
 ## Current Opcode You Are Working On:
-Zach:    TBD    
+Zach:    MOVE   
 Brendan: MULS   
-Lucas: Bcc
+Lucas:   BCC   
 
 ## Updates:
 <p>
