@@ -78,6 +78,9 @@ CLR_A_REG:  MACRO
 *   D7 = number of bits we want
 *-----------------------------------------------------------
 GET_BITS:   MACRO
+
+            CLR_D_REGS
+
             * Subtract value to find amount to shift by 
             ADD.B   \1, D7          
             SUB.B   \2, D7 
@@ -99,6 +102,20 @@ GET_BITS:   MACRO
             * shift out low bits
             LSR.W   D6, D4          * isolate bits
             ENDM
+
+*----------------------TO BUFFER----------------------------
+* Description:
+* Converts a Hex numbered address (1-9 or A-F) back to an
+* ASCII value and pushes it to the buffer for printing
+*
+* Parameters:
+*   \1 = should hold value (in hex) you want to push to the buffer
+*-----------------------------------------------------------
+TO_BUFFER:  MACRO
+            MOVE.L  \1, D2  
+            JSR     NUMBER_OR_LETTER
+            ENDM
+*-----------------------------------------------------------
 
 
 *-----------------------------------------------------------
@@ -264,15 +281,6 @@ STORE_INPUT:
 STORE_START:
             MOVE.L     D3, D6
             ADD.B      #1, D4               ; value to indicate if we are done parsing
-            ;CLR        D3
-            ;BRA       VALIDATE_INPUT       ; UNCOMMENT WHEN TAKING OUT TEST CODE BELOW
-
-            ; USED FOR TESTING - MAKE SURE OUTPUT IS CORRECT
-            CLR.L       D1
-            MOVE.L      D3, D1   
-            MOVE.B      #3, D0     
-            TRAP        #15
-            PRINT_MSG   newline
             
             CLR         D3
             BRA         VALIDATE_INPUT
@@ -280,15 +288,6 @@ STORE_START:
 STORE_END:
             MOVE.L     D3, D7
             ADD.B      #1, D4               ; value to indicate if we are done parsing
-            ;CLR        D3
-            ;BRA       VALIDATE_INPUT       ; UNCOMMENT WHEN TAKING OUT TEST CODE BELOW
-
-            ; USED FOR TESTING - MAKE SURE OUTPUT IS CORRECT
-            CLR.L       D1
-            MOVE.L      D3, D1   
-            MOVE.B      #3, D0     
-            TRAP        #15
-            PRINT_MSG   newline
 
             CLR         D3
             BRA         VALIDATE_INPUT
@@ -522,6 +521,9 @@ FIND_OPCODE:
             CMP.B   #%0100, opTag 
             BEQ     OPC_0100
 
+            CMP.B   #%0101, opTag 
+            BEQ     OPC_0101
+
             CMP.B   #%1000, opTag
             BEQ     OPC_1000
 
@@ -546,24 +548,57 @@ BAD_OPCODE:
 
 *------------------------OPC_0000---------------------------
 * First four bits = 0000
-* (ADDI)
+* (ADDI, SUBI)
 *-----------------------------------------------------------
 OPC_0000:
+            GET_BITS  #11, #8
+            
+            * is the opcode ADDI?
+            CMP.B     #%0110, D4
+            BEQ       OPC_ADDI
+
+            * is the opcode SUBI?
+            CMP.B     #%0100, D4
+            BEQ       OPC_SUBI
+
+            JMP       BAD_OPCODE
+
+*------------------------OPC_ADDI---------------------------
+OPC_ADDI:
             MOVE.B  #'A',(A1)+          * Put ADD into Buff
             MOVE.B  #'D',(A1)+
             MOVE.B  #'D',(A1)+
             MOVE.B  #'I',(A1)+
             MOVE.B  #'.',(A1)+
 
-            GET_BITS #7, #6             * get size bits (gets returned to D4)
-            MOVE    D4, D3              * load parameter for SIZE_TO_BUFFER
-            JSR     SIZE_TO_BUFFER      * put operation size in buffer
-            BSR     CHECK_IMMEDIATE
+            BSR     DECODE_IMMEDIATE
+
+*------------------------OPC_SUBI---------------------------
+OPC_SUBI:            
+            MOVE.B  #'S',(A1)+          * Put ADD into Buff
+            MOVE.B  #'U',(A1)+
+            MOVE.B  #'B',(A1)+
+            MOVE.B  #'I',(A1)+
+            MOVE.B  #'.',(A1)+
+
+            BSR     DECODE_IMMEDIATE
+
+*--------------Subroutines for OPC_0000---------------------  
+DECODE_IMMEDIATE:
+            * push size to buffer
+            GET_BITS #7, #6              * get size bits (gets returned to D4)
+            MOVE     D4, D3              * load parameter for SIZE_TO_BUFFER
+            JSR      SIZE_TO_BUFFER      * put operation size in buffer
+
+            * push #<data> to buffer
+            JSR     CHECK_IMMEDIATE
+
+            * push <ea> to buffer
             MOVE.B  #',',(A1)+
             JSR     INSERT_SPACE
             JSR     GET_EA_MODE
             BRA     IDENTIFY_OPCODE
-
+ 
 CHECK_IMMEDIATE:
             MOVE.B  #'#', (A1)+
 
@@ -580,6 +615,7 @@ IMMEDIATE_WORD:
 IMMEDIATE_LONG:
             JSR     EA_LONG      
             RTS
+*-----------------------------------------------------------
 
 
 *------------------------OPC_0100---------------------------
@@ -588,24 +624,30 @@ IMMEDIATE_LONG:
 *-----------------------------------------------------------
 OPC_0100:
 
-            ;Check if the opcode is NOP
-            MOVE.W  opcode, D2          ;Copy opcode to D2
-            CMP.W   #$4E71, D2          ;Check if D2 is equal to NOP (0x4E71 in hex)
-            BEQ     OPC_NOP             ;If equal branch to label to handle the opcode NOP
+            * Check if the opcode is NOP
+            MOVE.W  opcode, D2              * Copy opcode to D2
+            CMP.W   #$4E71, D2              * Check if D2 is equal to NOP (0x4E71 in hex)
+            BEQ     OPC_NOP                 * If equal branch to label to handle the opcode NOP
             
-            ;Check if the opcode is NOT
-            ASR.L   #8, D2 ;Shift bits to compare
+            * Check if the opcode is NOT
+            ASR.L   #8, D2                  * Shift bits to compare
             CMP.B   #%01000110, D2
             BEQ     OPC_NOT
             CLR.L   D2
             
-            ;Check if the opcode is LEA
-            MOVE.W   opcode, D4          ;Put opcode in D4 to use the macro get bits
+            * Check if the opcode is LEA
+            MOVE.W   opcode, D4             * Put opcode in D4 to use the macro get bits
             GET_BITS #8, #6 
-            CMP.B   #%00000111, D4       ;if bits 6-8 are equal to 111, then the opocde is LEA
+            CMP.B   #%0111, D4              * if bits 6-8 are equal to 111, then the opocde is LEA
             BEQ     OPC_LEA
-            CLR.L   D2                   ;If opcode doesn't match clear appropriate registers 
-            CLR.L   D4
+
+            * Check if the opcode is JSR
+            CMP.B   #%0010, D4              * if bits 6-8 are equal to 010, then the opocde is LEA
+            BEQ     OPC_JSR
+
+            * Check if the opcode is RTS
+            CMP.B   #%0001, D4              * if bits 6-8 are equal to 001, then the opocde is LEA
+            BEQ     OPC_RTS
 
 *---------------------------OPC_NOP--------------------------------
 
@@ -649,25 +691,50 @@ GET_NOT_SIZE:
             MOVE.B  D2, D3
             RTS
 
+*-----------------------------OPC_LEA------------------------------
 OPC_LEA:
-           * Put LEA into A1 buffer for printing
+            * Put LEA into A1 buffer for printing
             MOVE.B  #'L',(A1)+      
             MOVE.B  #'E',(A1)+ 
             MOVE.B  #'A',(A1)+
             MOVE.B  #'.',(A1)+ 
             MOVE.B  #'L',(A1)+ 
-            JSR INSERT_SPACE
+            JSR     INSERT_SPACE
                     
-            JSR GET_EA_MODE
+            JSR     GET_EA_MODE
             MOVE.B  #',',(A1)+ 
-            JSR INSERT_SPACE
-            JSR GET_DATA_REG_NUM
-            BRA IDENTIFY_OPCODE  
+            JSR     INSERT_SPACE
+            JSR     GET_DATA_REG_NUM
+            BRA     IDENTIFY_OPCODE  
+
+*-----------------------------OPC_JSR------------------------------
+OPC_JSR:
+            * Put LEA into A1 buffer for printing
+            MOVE.B  #'J',(A1)+      
+            MOVE.B  #'S',(A1)+ 
+            MOVE.B  #'R',(A1)+
+            JSR     INSERT_SPACE
+            
+            JSR     GET_EA_MODE
+            BRA     IDENTIFY_OPCODE  
+
+*-----------------------------OPC_RTS------------------------------
+OPC_RTS:
+            * Put LEA into A1 buffer for printing
+            MOVE.B  #'R',(A1)+      
+            MOVE.B  #'T',(A1)+ 
+            MOVE.B  #'S',(A1)+
+        
+            BRA IDENTIFY_OPCODE
 
 *-----------------------------------------------------------
 
-*---------------------------opc_1001------------------------
 
+
+*---------------------------OPC_1000------------------------
+* First four bits = 1001
+* (DIVU)
+*-----------------------------------------------------------
 OPC_1000:   * keeping this in case there's more that start with 1000
             BRA     OPC_DIVU
             
@@ -687,6 +754,69 @@ OPC_DIVU:
 
 *-----------------------------------------------------------
 
+
+
+*-----------------------OPC_0101----------------------------
+* First four bits = 0101
+* (ADDQ, SUBQ)
+*-----------------------------------------------------------
+OPC_0101:
+            GET_BITS  #8, #8
+            
+            * is the opcode ADDQ?
+            CMP.B     #%0000, D4
+            BEQ       OPC_ADDQ
+
+            * is the opcode SUBI?
+            CMP.B     #%0001, D4
+            BEQ       OPC_SUBQ
+
+            JMP       BAD_OPCODE
+
+*------------------------OPC_ADDI---------------------------
+OPC_ADDQ:
+            MOVE.B  #'A',(A1)+          * Put ADD into Buff
+            MOVE.B  #'D',(A1)+
+            MOVE.B  #'D',(A1)+
+            MOVE.B  #'Q',(A1)+
+            MOVE.B  #'.',(A1)+
+
+            BSR     DECODE_QUICK
+
+*------------------------OPC_SUBI---------------------------
+OPC_SUBQ:            
+            MOVE.B  #'S',(A1)+          * Put ADD into Buff
+            MOVE.B  #'U',(A1)+
+            MOVE.B  #'B',(A1)+
+            MOVE.B  #'Q',(A1)+
+            MOVE.B  #'.',(A1)+
+
+            BSR     DECODE_QUICK
+
+*------------------Subroutines for OPC_0101-----------------
+DECODE_QUICK:            
+            * Get size of operation and push to buffer
+            CLR.L           D4
+            GET_BITS        #7, #6
+            MOVE.B          D4, D3
+            JSR             SIZE_TO_BUFFER  
+
+            * push value of #<data> to buffer
+            CLR.L      D4
+            GET_BITS   #11, #9
+            MOVE.B     #'#',(A1)+
+            TO_BUFFER  D4
+
+            * push <ea> to buffer
+            MOVE.B  #',',(A1)+
+            JSR     INSERT_SPACE
+            JSR     GET_EA_MODE
+
+            BRA     IDENTIFY_OPCODE
+*-----------------------------------------------------------
+
+
+
 *-----------------------OPC_1001----------------------------
 * First four bits = 1001
 * (SUB)
@@ -699,6 +829,8 @@ OPC_1001:
             MOVE.B  #'.',(A1)+
             BRA     PROCESS_ROEA
 *-----------------------------------------------------------
+
+
 
 *-----------------------OPC_1100----------------------------
 * First four bits = 1100
@@ -713,7 +845,6 @@ OPC_1100:
             CMP.B   #%00000111, D4
             BEQ     OPC_MULS
             BNE     OPC_AND
-
 
 *---------------------------OPC_AND------------------------
 OPC_AND:    ; AND opcode subroutine
@@ -741,6 +872,8 @@ OPC_MULS:  * MULS opcode subroutine
             MOVE.B  #%10111111, valid   * set the valid mode bits (to be used later)
             
             BRA     EA_TO_D * just the one addressing mode
+*-----------------------------------------------------------
+
 
 *---------------------------opc_1101------------------------
 * First four bits = 1101
@@ -859,7 +992,7 @@ GET_DATA_REG_NUM:
             MOVE.B  D2, D6
 
             RTS
-
+*-----------------------------------------------------------
 
 
 
@@ -1093,6 +1226,7 @@ INVALID_EA:
 
 
 
+
 *----------------------HEX TO ASCII-------------------------
 * Description:
 * Converts a Hex numbered address (1-9 or A-F) back to an
@@ -1102,8 +1236,6 @@ INVALID_EA:
 *   D1 = pass in 1 if the address is a word, pass in 3 if address is a long
 *   D7 = holds the original address to parse (either word or long, for example: $7000)
 *
-* Parameters (if calling NUMBER_OR_LETTER (usually done in opcode sections)):
-*   D2 = should hold value (in hex) you want to push to the buffer
 *
 * Registers Used:
 *   D0 = number of bits to remove
