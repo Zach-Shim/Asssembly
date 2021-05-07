@@ -703,10 +703,10 @@ OPC_LEA:
                     
             JSR     GET_EA_MODE
             MOVE.B  #',',(A1)+ 
-            JSR     INSERT_SPACE
-            JSR     GET_DATA_REG_NUM
+            JSR INSERT_SPACE
+            JSR GET_DATA_REG_NUM
 
-            BRA     IDENTIFY_OPCODE  
+            BRA IDENTIFY_OPCODE    
             
 
 *-----------------------------------------------------------
