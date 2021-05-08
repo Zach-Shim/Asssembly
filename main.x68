@@ -775,7 +775,7 @@ OPC_0101:
 
             JMP       BAD_OPCODE
 
-*------------------------OPC_ADDI---------------------------
+*------------------------OPC_ADDQ---------------------------
 OPC_ADDQ:
             MOVE.B  #'A',(A1)+          * Put ADD into Buff
             MOVE.B  #'D',(A1)+
@@ -873,7 +873,7 @@ OPC_MULS:  * MULS opcode subroutine
             
             MOVE.B  #%10111111, valid   * set the valid mode bits (to be used later)
             
-            BRA     EA_TO_D * just the one addressing mode
+            JSR     EA_TO_D
 *-----------------------------------------------------------
 
 
@@ -1211,7 +1211,18 @@ EA_LONG:
 
 EA_IMMEDIATE:
             MOVE.B      #'#', (A1)+
-            BRA         EA_LONG
+
+            * if MULS or DIVS, fetch Word from memory
+            CLR.L       D1
+            MOVE.B      opTag, D1           * load first four bits of opcode
+
+            CMP.B       #%1100, D1          * is this MULS?
+            BEQ         EA_WORD
+
+            CMP.B       #%1000, D1          * is this DIVS?
+            BEQ         EA_WORD          
+
+            BRA         EA_LONG             * else, print longword worth of data
 
 GET_EA_DONE:
             RTS
@@ -1349,7 +1360,7 @@ LONG_TO_BUFFER:
 STB_END:
             MOVE.B  #' ',(A1)+          * add blank space to buffer
             RTS                         
-
+*-----------------------------------------------------------
 
 
 
@@ -1382,4 +1393,3 @@ DONE:
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
-
