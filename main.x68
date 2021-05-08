@@ -752,7 +752,7 @@ OPC_DIVU:
             * set the valid bits (since there's only one adressing mode)
             MOVE.B  #%10111111, valid
             
-            BRA     EA_TO_D
+            JMP     EA_TO_D
 
 *-----------------------------------------------------------
 
@@ -873,7 +873,7 @@ OPC_MULS:  * MULS opcode subroutine
             
             MOVE.B  #%10111111, valid   * set the valid mode bits (to be used later)
             
-            JSR     EA_TO_D
+            JMP     EA_TO_D
 *-----------------------------------------------------------
 
 
