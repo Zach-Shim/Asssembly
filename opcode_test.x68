@@ -15,9 +15,17 @@ TEST_JSR_1:
         RTS
 
 MAIN:
-        ;MULS.W  #$0010, D0
-        ;MULS.W   D0, D1
-        ;MULS.L  $123456, D1
+        ADD.L   #5, D0
+        MULS.W  #$0010, D0
+        MULS.W  D0, D1
+        MULS.W  $123456, D1
+        MULS.W  (A0), D1
+        
+        ADD.L   #54327830, D2
+        DIVU.W  #$FCE, D2
+        DIVU.W  D2, D1
+        DIVU.W  $123456, D2
+        DIVU.W  (A3), D2
 
         LEA     $1234, A3
 
@@ -67,6 +75,7 @@ TEST_JSR_2:
 DONE:
 		SIMHALT             ; halt simulator
         END		MAIN        ; last line of source
+
 
 
 
