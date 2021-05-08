@@ -10,8 +10,7 @@ Lucas:   Bcc
 
 ## Updates:
 <p>
-JSR and RTS are done. All tests seem to be passing for now.   
-Implemented ADDI, SUBI, ADDQ, and SUBQ. All tests seem to be passing for now.   
+JSR and RTS are done.Implemented ADDI, SUBI, ADDQ, and SUBQ. All tests seem to be passing for now.   
 MULS and DIVS are fixed.   
 </p>
 
