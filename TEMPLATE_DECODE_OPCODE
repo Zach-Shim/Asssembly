@@ -10,9 +10,9 @@ OPC_EXAMPLE:
             INSERT_PERIOD
 
             *
-            * ONLY NEED TO INCLUDE IF YOUR OPCODE USES IMMEDIATE ADDRESSING (i.e., do not need to use for Bcc, JSR, RTS, NOP, et.c)
             * These three lines get the size of an opcode operation and push it to the buffer
             GET_BITS        #<high bit of size>, #<low bit of size>     * value gets returned in D4
+            * ONLY NEED TO MOVE SIZE TO opSize IF YOUR OPCODE USES IMMEDIATE ADDRESSING (i.e., do not need to use for Bcc, JSR, RTS, NOP, et.c)
             MOVE.B          D4, opSize                                  * byte = 0, word = 1, long = 2 NOTE THAT THE SIZE VALUES MAY DIFFER DEPENDING ON THE OPCODE SO YOU WILL HAVE TO CONVERT THE VALUES TO 0/1/2 ACCORDINGLY (look at MOVE for an example). opSize is used to determine the size of immediate data in DECODE_EA.
             SIZE_TO_BUFFER  D4                                          * put operation size in buffer
             *
