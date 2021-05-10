@@ -15,6 +15,28 @@ TEST_JSR_1:
         RTS
 
 MAIN:
+        MOVE.B  D0, D1
+        MOVE.W  D2, D3
+        MOVE.L  D4, D5
+
+        MOVE.B  (A1), D1
+        MOVE.W  D2, (A2)
+
+        MOVE.L  -(A3), D3
+        MOVE.B  D4, -(A4)
+
+        MOVE.W  (A5)+, D5
+        MOVE.L  D6, (A6)+
+
+        MOVE.B  $1234, D1
+        MOVE.W  D2, $5678910
+        MOVE.L  $7842, $C01EABD
+
+        MOVE.W  #$3478, D0
+        MOVE.W  #$BED0, $5678910
+        MOVE.L  #$EC478256, D1
+        MOVE.L  #$FACAA456, $78236
+
         ADD.L   #5, D0
         MULS.W  #$0010, D0
         MULS.W  D0, D1
@@ -73,19 +95,5 @@ TEST_JSR_2:
         RTS
 
 DONE:
-		SIMHALT             ; halt simulator
-        END		MAIN        ; last line of source
-
-
-
-
-
-
-
-
-
-
-*~Font name~Courier New~
-*~Font size~12~
-*~Tab type~1~
-*~Tab size~4~
+	SIMHALT             ; halt simulator
+        END     MAIN        ; last line of source
