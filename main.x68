@@ -14,8 +14,11 @@
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
 LF          EQU     $0A 
 
-startMsg:   DC.B    'Please enter a starting address ', CR, LF, 0
-endMsg:     DC.B    'Please enter an ending address ', CR, LF, 0
+rule1:      DC.B    '1. Addresses must be in the range $FFFFFF > x > $6FFF where x is your given address.', CR, LF, 0 
+rule2:      DC.B    '2. If you use any letters (A-F), make sure they are upper case.', CR, LF, 0
+rule3:      DC.B    '3. If you use constants (DC), make sure you give addresses that does not include that part of memory (only want to parse instructions).', CR, LF, 0
+startMsg:   DC.B    'Please enter a starting address.  ', CR, LF, 0
+endMsg:     DC.B    'Please enter an ending address. ', CR, LF, 0
 doneMsg:    DC.B    'exiting...', CR, LF, 0
 badInput:   DC.B    'Invalid Input', CR, LF, 0
 newline:    DC.B    '', CR, LF, 0
@@ -24,11 +27,15 @@ userAddr:   DS.L    1
 startAddr:  DS.L    1
 endAddr:    DS.L    1
 
-opOutput:   DS.L    2
-
 opcode:     DS.W    1   
 opTag:      DS.B    1               ; a four bit identifier for opcodes (first four bits of an instruction, ex. 1011 = ADD)
+opSize:     DS.B    1
 valid:      DS.B    1
+
+ea_mode     DS.B    1
+ea_register DS.B    1
+ea_valid    DS.B    1
+
 
 
 
@@ -63,9 +70,10 @@ CLR_A_REG:  MACRO
             ENDM              
 
 *-----------------------------------------------------------
-* \1 should be highest bit in range
-* \2 should be lowest bit in range
-* Result will be returned in D4
+* Parameters:
+*   \1 should be highest bit in range
+*   \2 should be lowest bit in range
+* 
 * Example: #11, #9
 *
 * Return Value:
@@ -134,6 +142,71 @@ SIZE_TO_BUFFER:   MACRO
                   ENDM
 *-----------------------------------------------------------
 
+
+
+
+
+
+*----------------Decoding EA Mode and Register--------------
+* Description:
+* Decodes EA mode and register and pushes to buffer
+* 
+* Parameters:
+*   \1 = high bit of ea
+*   \2 = low bit of ea
+*
+* Registers Used:
+*   D1 = temp variable
+*
+* For Example (most common): 
+*   DECODE_EA    #5, #0
+*
+*-----------------------------------------------------------
+DECODE_EA:  MACRO
+            CLR_D_REGS
+            MOVE.B      \1, D1
+            JSR         DECODE_EA_HELP
+            JSR         EA_TO_BUFFER
+            ENDM
+
+GET_EA_MODE: MACRO
+             GET_BITS        \1, \2
+             MOVE.B          D4, ea_mode
+             ENDM
+
+GET_EA_REG:  MACRO
+             GET_BITS        \1, \2
+             MOVE.B          D4, ea_register
+             ENDM
+*-----------------------------------------------------------
+
+*-----------------------------------------------------------
+DECODE_EA_HELP:
+        
+            CMP.B       #5, D1               * is this bits 5-0?
+            BEQ         DECODE_6_TO_0
+
+            CMP.B       #11, D1              * is this bits 11-6? 
+            BEQ         DECODE_11_TO_6
+
+DECODE_6_TO_0:
+            GET_EA_MODE #5, #3               * get ea mode
+            GET_EA_REG  #2, #0               * get ea register
+            BRA         EA_END
+
+DECODE_11_TO_6:
+            GET_EA_MODE #8, #6               * get ea mode
+            GET_EA_REG  #11, #9              * get ea register
+
+EA_END:
+            RTS
+
+*-----------------------------------------------------------            
+
+
+
+
+
 *----------------------Buffer Macros------------------------
 * Description:
 * Pushes commonly used single characters to the buffer
@@ -166,6 +239,7 @@ INSERT_DOLLAR:  MACRO
 
 
 
+
 *-----------------------------------------------------------
 * Description:  
 * Main routine
@@ -173,8 +247,12 @@ INSERT_DOLLAR:  MACRO
 
 *-------------------------MAIN------------------------------
 MAIN:
-            BSR     GET_INPUT
-            BRA     LOAD_ADDRESSES
+            PRINT_MSG    rule1
+            PRINT_MSG    rule2
+            PRINT_MSG    rule3
+            BSR          GET_INPUT
+            BSR          CHECK_ADDRESS
+            BRA          LOAD_ADDRESSES
 *-----------------------------------------------------------
 
 
@@ -196,40 +274,27 @@ MAIN:
 *-----------------------------------------------------------
 *-------------------------Get Input-------------------------
 GET_INPUT:
-            CMP      #0, D4
-            BEQ      GET_START_ADDRESS
-               
-            MOVE.L   D6, startAddr
-            MOVE.L   D7, endAddr
+            PRINT_MSG    startMsg
+            BSR          GET_ADDRESS   
+            MOVE.L       D7, startAddr
+
+            CLR_D_REGS
+
+            PRINT_MSG    endMsg
+            BSR          GET_ADDRESS   
+            MOVE.L       D7, endAddr
             RTS 
 *-----------------------------------------------------------
 
-*----------------------Get Starting Address-----------------
-GET_START_ADDRESS:
-            CLR.L   D0
-            LEA.L   startMsg, A1      
-            MOVE.B  #14, D0     
-            TRAP    #15
-
+*------------------------Get Address------------------------
+GET_ADDRESS:
             LEA.L   userAddr, A1
             MOVE.B  #2, D0
             TRAP    #15
-            ;MOVE.B  D1, startSize
-            BRA     VALIDATE_INPUT
-*-----------------------------------------------------------
 
-*----------------------Get Ending Address-------------------
-GET_END_ADDRESS:
-            CLR.L   D0
-            LEA.L   endMsg, A1      
-            MOVE.B  #14, D0     
-            TRAP    #15
-
-            LEA.L   userAddr, A1
-            MOVE.B  #2, D0
-            TRAP    #15
-            ;MOVE.B  D1, endSize
-            BRA     CHECK_LENGTH
+            BSR     CHECK_LENGTH
+            BSR     CONVERT_TO_HEX
+            RTS
 *-----------------------------------------------------------
 
 
@@ -258,29 +323,34 @@ GET_END_ADDRESS:
 *-----------------------------------------------------------
 
 *----------------------VALIDATE INPUT---------------------------      
-
-VALIDATE_INPUT:        
-            CMP.B      #0, D4               ; D4 = 0 if start and end address have not been parsed
-            BEQ        CHECK_LENGTH         ; if equal, parse START address 
-            CMP.B      #1, D4               ; D4 = 1 if start has been parsed but not end address
-            BEQ        GET_END_ADDRESS      ; if equal, parse ENDING address  
-            BRA        GET_INPUT            ; done parsing, D4 = 2
-
 CHECK_LENGTH:
-            CMP.B      #4, D1               ; for task 2, length of string is in D1                
-            BEQ        CONVERT_TO_HEX 
+            CMP.B      #1, D1               ; for task 2, length of string is in D1                
+            BLT        INVALID_INPUT 
             CMP.B      #8, D1               ; address can either be 4 or 8 bits in length  
-            BEQ        CONVERT_TO_HEX
-            BRA        INVALID_INPUT
+            BGT        INVALID_INPUT
+            RTS
 
 INVALID_INPUT:  
-            CLR.L      D3
             PRINT_MSG  badInput
-            CMP.B      #0, D4 
-            BEQ        GET_START_ADDRESS  
-            CMP.B      #1, D4               ; D4 = 1 if start has been parsed but not end address
-            BEQ        GET_END_ADDRESS      ; if equal, parse ENDING address  
-            BRA        MAIN
+            BRA        GET_INPUT
+*-----------------------------------------------------------
+
+*----------------------VALIDATE INPUT---------------------------      
+CHECK_ADDRESS:
+            MOVE.L     startAddr, D5
+            CMP.L      endAddr, D5          ; starting address >= ending address?
+            BGE        INVALID_ADDRESS
+
+            CMP.L      #$6FFF, D5
+            BLE        INVALID_INPUT 
+            
+            CMP.L      #$FFFFFF, endAddr
+            BGE        INVALID_INPUT
+            RTS
+
+INVALID_ADDRESS:  
+            PRINT_MSG  badInput
+            BRA        GET_INPUT
 *-----------------------------------------------------------
 
 *----------------CONVERT FROM ASCII TO HEX------------------
@@ -308,7 +378,7 @@ LETTER_TO_HEX:
             BRA        STORE_CHAR
 
 STORE_CHAR:       
-            ADD.B     (A1)+, D3            ; keep hex stored in D3           
+            ADD.B      (A1)+, D3           ; keep hex stored in D3           
             BRA        ITERATE                 
 
 ITERATE:
@@ -320,25 +390,8 @@ ITERATE:
             BRA        CONVERT_TO_HEX
 
 STORE_INPUT:
-            CMP.B      #0, D4               ; D4 = 0 if start and end address have not been parsed
-            BEQ        STORE_START          ; if equal, parse START address 
-            
-            CMP.B      #1, D4               ; D4 = 1 if start has been parsed but not end address
-            BEQ        STORE_END         
-
-STORE_START:
-            MOVE.L     D3, D6
-            ADD.B      #1, D4               ; value to indicate if we are done parsing
-            
-            CLR         D3
-            BRA         VALIDATE_INPUT
-
-STORE_END:
             MOVE.L     D3, D7
-            ADD.B      #1, D4               ; value to indicate if we are done parsing
-
-            CLR         D3
-            BRA         VALIDATE_INPUT
+            RTS
 *-----------------------------------------------------------
 
 
@@ -390,17 +443,18 @@ PRINT_WORD:
             CLR_D_REGS
             MOVE.B    #1, D1            * passing 1 means we are passing word as a parameter to HEX_TO_ASCII
             MOVE.W    A2, D7            * passing current parsing position means we are passing an address as a parameter in D7 to HEX_TO_ASCII
-            JSR       HEX_TO_ASCII
             BRA       FINISH_PRINT
 
 PRINT_LONG:
             CLR_D_REGS
             MOVE.B    #3, D1            * passing 1 means we are passing long as a parameter to HEX_TO_ASCII
             MOVE.L    A2, D7
-            JSR       HEX_TO_ASCII
             BRA       FINISH_PRINT
 
 FINISH_PRINT:
+            * convert hex values back to ASCII
+            JSR       HEX_TO_ASCII
+            
             * print out string
             MOVE.B    #00,(A1)
             CLR_D_REGS
@@ -460,20 +514,20 @@ PRINT_INSTRUCTION:
 *-----------------------------------------------------------
 LOAD_ADDRESSES: 
             * reset A1 to beginning of string
-            CLR.L     D0
-            CLR_A_REG D0, A1
+            CLR.L       D0
+            CLR_A_REG   D0, A1
 
             * load start and end registers and print starting address
-            MOVEA.L startAddr, A2
-            MOVEA.L endAddr, A3
-            BSR     PRINT_ADDRESS
+            MOVEA.L     startAddr, A2
+            MOVEA.L     endAddr, A3
+            BSR         PRINT_ADDRESS
             INSERT_SPACE
 
-            BSR     GRAB_NEXT_WORD
-            BSR     GRAB_FIRST_FOUR_BITS     ; grabs that opcode's ID (first four bits)
+            BSR         GRAB_NEXT_WORD
+            BSR         GRAB_FIRST_FOUR_BITS     ; grabs that opcode's ID (first four bits)
 
             * Push current registers onto the stack (so we can have fresh registers)
-            MOVEM.L D0-D7,-(SP)              ; move the old registers onto the stack
+            MOVEM.L D0-D7,-(SP)                  ; move the old registers onto the stack
             BRA     FIND_OPCODE
 *-----------------------------------------------------------
 
@@ -565,6 +619,15 @@ FIND_OPCODE:
             CMP.B   #%0000, opTag 
             BEQ     OPC_0000
 
+            CMP.B   #%0001, opTag 
+            BEQ     OPC_0001
+
+            CMP.B   #%0010, opTag 
+            BEQ     OPC_0010
+
+            CMP.B   #%0011, opTag 
+            BEQ     OPC_0011
+
             CMP.B   #%0100, opTag 
             BEQ     OPC_0100
 
@@ -634,17 +697,18 @@ OPC_SUBI:
 DECODE_IMMEDIATE:
             * push size to buffer
             GET_BITS        #7, #6              * get size bits (gets returned to D4)
+            MOVE.B          D4, opSize
             SIZE_TO_BUFFER  D4                  * put operation size in buffer
 
             * push #<data> to buffer
-            JSR     CHECK_IMMEDIATE
+            JSR             CHECK_IMMEDIATE
 
             INSERT_COMMA
             INSERT_SPACE
 
             * push <ea> to buffer
-            JSR     DECODE_BITS_6_TO_0
-            BRA     IDENTIFY_OPCODE
+            DECODE_EA       #5, #0
+            BRA             IDENTIFY_OPCODE
  
 CHECK_IMMEDIATE:
             INSERT_POUND
@@ -664,6 +728,73 @@ IMMEDIATE_LONG:
             RTS
 *-----------------------------------------------------------
 
+*------------------------OPC_0001---------------------------
+* First four bits = 0001
+* (MOVE.B)
+*-----------------------------------------------------------
+OPC_0001:
+            MOVE.B   #'M',(A1)+          * Put ADD into Buff
+            MOVE.B   #'O',(A1)+
+            MOVE.B   #'V',(A1)+
+            MOVE.B   #'E',(A1)+
+            MOVE.B   #'.',(A1)+
+            MOVE.B   #'B',(A1)+
+            INSERT_SPACE
+
+            MOVE.B   #0, opSize
+
+            BSR      DECODE_MOVE
+            BRA      IDENTIFY_OPCODE
+*-----------------------------------------------------------
+
+*------------------------OPC_0010---------------------------
+* First four bits = 0010
+* (MOVE.L)
+*-----------------------------------------------------------
+OPC_0010:
+            MOVE.B  #'M',(A1)+          * Put ADD into Buff
+            MOVE.B  #'O',(A1)+
+            MOVE.B  #'V',(A1)+
+            MOVE.B  #'E',(A1)+
+            MOVE.B  #'.',(A1)+
+            MOVE.B  #'L',(A1)+
+            INSERT_SPACE
+
+            MOVE.B   #2, opSize
+
+            BSR      DECODE_MOVE
+            BRA      IDENTIFY_OPCODE
+*-----------------------------------------------------------
+
+*------------------------OPC_0011---------------------------
+* First four bits = 0011
+* (MOVE.W)
+*-----------------------------------------------------------
+OPC_0011:
+            MOVE.B  #'M',(A1)+          * Put ADD into Buff
+            MOVE.B  #'O',(A1)+
+            MOVE.B  #'V',(A1)+
+            MOVE.B  #'E',(A1)+
+            MOVE.B  #'.',(A1)+
+            MOVE.B  #'W',(A1)+
+            INSERT_SPACE
+
+            MOVE.B   #1, opSize
+
+            BSR      DECODE_MOVE
+            BRA      IDENTIFY_OPCODE
+*-----------------------------------------------------------
+
+*---------------------Decode Move---------------------------
+DECODE_MOVE:
+            DECODE_EA       #5, #0
+            
+            INSERT_COMMA
+            INSERT_SPACE
+
+            DECODE_EA       #11, #6
+            RTS
+*-----------------------------------------------------------
 
 *------------------------OPC_0100---------------------------
 * First four bits = 0100
@@ -685,8 +816,8 @@ OPC_0100:
             * Check if the opcode is LEA
             MOVE.W   opcode, D4             * Put opcode in D4 to use the macro get bits
             GET_BITS #8, #6 
-            CMP.B   #%0111, D4              * if bits 6-8 are equal to 111, then the opocde is LEA
-            BEQ     OPC_LEA
+            CMP.B    #%0111, D4              * if bits 6-8 are equal to 111, then the opocde is LEA
+            BEQ      OPC_LEA
 
             * Check if the opcode is JSR
             CMP.B   #%0010, D4              * if bits 6-8 are equal to 010, then the opocde is LEA
@@ -718,8 +849,9 @@ OPC_NOT:
             
             * Calculate Size (.b,.w.l)
             GET_BITS        #7, #6
+            MOVE.B          D4, opSize
             SIZE_TO_BUFFER  D4                  * put operation size in buffer
-            JSR             DECODE_BITS_6_TO_0
+            DECODE_EA       #5, #0
             BRA             IDENTIFY_OPCODE
 
 *-----------------------------OPC_LEA------------------------------
@@ -731,8 +863,10 @@ OPC_LEA:
             INSERT_PERIOD
             MOVE.B  #'L',(A1)+ 
             INSERT_SPACE
+
+            MOVE.B          #2, opSize      * required to always be long operation
                     
-            JSR     DECODE_BITS_6_TO_0
+            DECODE_EA       #5, #0
             INSERT_COMMA
             INSERT_SPACE
             JSR GET_DATA_REG_NUM
@@ -750,8 +884,8 @@ OPC_JSR:
             MOVE.B  #'R',(A1)+
             INSERT_SPACE
             
-            JSR     DECODE_BITS_6_TO_0
-            BRA     IDENTIFY_OPCODE  
+            DECODE_EA       #5, #0
+            BRA             IDENTIFY_OPCODE  
 
 *-----------------------------OPC_RTS------------------------------
 OPC_RTS:
@@ -779,6 +913,8 @@ OPC_DIVU:
             INSERT_PERIOD
             MOVE.B  #'W',(A1)+  * always size word
             INSERT_SPACE
+
+            MOVE.B  #1, opSize
             
             * set the valid bits (since there's only one adressing mode)
             MOVE.B  #%10111111, valid
@@ -831,6 +967,7 @@ DECODE_QUICK:
             * Get size of operation and push to buffer
             CLR.L           D4
             GET_BITS        #7, #6
+            MOVE.B          D4, opSize
             SIZE_TO_BUFFER  D4                  * put operation size in buffer
 
             * push value of #<data> to buffer
@@ -843,8 +980,8 @@ DECODE_QUICK:
             INSERT_SPACE
 
             * push <ea> to buffer
-            JSR     DECODE_BITS_6_TO_0
-            BRA     IDENTIFY_OPCODE
+            DECODE_EA       #5, #0
+            BRA             IDENTIFY_OPCODE
 *-----------------------------------------------------------
 
 
@@ -874,9 +1011,9 @@ OPC_1100:
             ; else, keep going to parse AND
 
             GET_BITS #8, #6
-            CMP.B   #%00000111, D4
-            BEQ     OPC_MULS
-            BNE     OPC_AND
+            CMP.B    #%00000111, D4
+            BEQ      OPC_MULS
+            BNE      OPC_AND
 
 *---------------------------OPC_AND------------------------
 OPC_AND:    ; AND opcode subroutine
@@ -900,6 +1037,8 @@ OPC_MULS:  * MULS opcode subroutine
             INSERT_PERIOD
             MOVE.B  #'W',(A1)+ * always size word
             INSERT_SPACE
+
+            MOVE.B   #1, opSize
             
             MOVE.B  #%10111111, valid   * set the valid mode bits (to be used later)
             
@@ -942,6 +1081,7 @@ OPC_1101:
 *-----------------------------------------------------------
 PROCESS_ROEA:
             GET_BITS        #7, #6              * retrieve size
+            MOVE.B          D4, opSize
             SIZE_TO_BUFFER  D4                  * put operation size in buffer
 
             GET_BITS        #8, #8              * retrieve type  
@@ -951,18 +1091,18 @@ PROCESS_ROEA:
             BEQ             EA_TO_D
 
 D_TO_EA:
-            JSR     GET_DATA_REG_NUM
+            JSR             GET_DATA_REG_NUM
             INSERT_COMMA
             INSERT_SPACE
-            JSR     DECODE_BITS_6_TO_0
-            BRA     ROEA_DONE
+            DECODE_EA       #5, #0
+            BRA             ROEA_DONE
 
 EA_TO_D:
-            JSR     DECODE_BITS_6_TO_0
+            DECODE_EA       #5, #0
             INSERT_COMMA
             INSERT_SPACE
-            JSR     GET_DATA_REG_NUM
-            BRA     ROEA_DONE
+            JSR             GET_DATA_REG_NUM
+            BRA             ROEA_DONE
 
 ROEA_DONE:
             INSERT_SPACE
@@ -989,7 +1129,7 @@ GET_DATA_REG_NUM:
 
 
 
-*----------------------DECODE_BITS_6_TO_0------------------
+*----------------------EA_TO_BUFFER------------------
 * Description:
 * Evaluates the ea mode and register of an opcode 
 * (usually last 6 bits of instruction format),
@@ -1000,147 +1140,87 @@ GET_DATA_REG_NUM:
 * Registers Used:
 *   D1 = amount to shift the opcode
 *   D2 = destination for shifts
-*   D5 = addressing mode
 *-----------------------------------------------------------
-DECODE_BITS_6_TO_0:
-            CLR_D_REGS
-            * move size of opcode to be manipulated
-            CLR.L   D2
-            MOVE.W  opcode, D2     
+EA_TO_BUFFER:                            
+            CMP.B   #%0000, ea_mode        * Direct Data Register
+            BEQ     EA_000
 
-            * shift left to identify
-            MOVE.B  #10, D1
-            LSL.W   D1, D2
-            
-            * shift right to isolate mode bits for EA 
-            MOVE.B  #13, D1
-            LSR.W   D1, D2
+            CMP.B   #%0001, ea_mode        * Direct Address Register
+            BEQ     EA_001
 
-            * store in appropriate register
-            MOVE.B  D2, D5
-            
-            BRA     FIND_MODE
+            CMP.B   #%0010, ea_mode        * Indirect Address Register
+            BEQ     EA_010
 
-*----------------------------FIND_MODE------------------------
-FIND_MODE:                            
-            CMP.B   #%0000, D5        * Direct Data Register
-            BEQ     ea_000
+            CMP.B   #%0011, ea_mode        * Post Increment
+            BEQ     EA_011
 
-            CMP.B   #%0001, D5        * Direct Address Register
-            BEQ     ea_001
+            CMP.B   #%0100, ea_mode        * Pre Decrement
+            BEQ     EA_100
 
-            CMP.B   #%0010, D5        * Indirect Address Register
-            BEQ     ea_010
+            CMP.B   #%0101, ea_mode        * Not necessary, go to bad EA
+            BEQ     EA_101
 
-            CMP.B   #%0011, D5        * Post Increment
-            BEQ     ea_011
+            CMP.B   #%0110, ea_mode        * Not necessary, go to bad EA
+            BEQ     EA_110
 
-            CMP.B   #%0100, D5        * Pre Decrement
-            BEQ     ea_100
-
-            CMP.B   #%0101, D5        * Not necessary, go to bad ea
-            BEQ     ea_101
-
-            CMP.B   #%0110, D5        * Not necessary, go to bad ea
-            BEQ     ea_110
-
-            CMP.B   #%0111, D5        * Absolute or immediate address
-            BEQ     ea_111
+            CMP.B   #%0111, ea_mode        * Absolute or immediate address
+            BEQ     EA_111
 
             BRA    INVALID_EA
 
 *----------------------------Direct Data Register------------------------
-ea_000:
-            MOVE.W      opcode, D2              * move current working word into temp storage
+EA_000:
             MOVE.B      #'D',(A1)+              * add "D" to buffer
-            
-            MOVE.B      #13, D1
-            LSL.W       D1,D2                   * isolate register bits (last 3)
-            LSR.W       D1,D2                   * D2 now holds the mode of the opcode
-            ADD.B       #$30,D2                 * convert data register # to ASCII digit
-
-            MOVE.B      D2,(A1)+                * register # to buffer                  
-            
+            ADD.B       #$30, ea_register       * convert data register # to ASCII digit
+            MOVE.B      ea_register, (A1)+      * register # to buffer                  
             RTS                                
 
 *----------------------------Direct Address Register------------------------
-ea_001:
-            MOVE.W      opcode, D2              * move current working word into temp storage
+EA_001:
             MOVE.B      #'A',(A1)+              * add "A" to buffer
-            
-            MOVE.B      #13, D1
-            LSL.W       D1,D2                   * isolate register bits (last 3)
-            LSR.W       D1,D2                   * D2 now holds the mode of the opcode
-            ADD.B       #$30,D2                 * convert data register # to ASCII digit
-
-            MOVE.B      D2,(A1)+                * register # to buffer               
-              
+            ADD.B       #$30, ea_register       * convert data register # to ASCII digit
+            MOVE.B      ea_register, (A1)+      * register # to buffer               
             RTS                            
 
 *----------------------------Indirect Address Register------------------------
-ea_010:
-            MOVE.W      opcode, D2              * move current working word into temp storage
+EA_010:
             MOVE.B      #'(',(A1)+              * add "(" to buffer
             MOVE.B      #'A',(A1)+              * add "A" to buffer
-
-            MOVE.B      #13, D1
-            LSL.W       D1,D2                   * isolate register bits (last 3)
-            LSR.W       D1,D2                   * D2 now holds the mode of the opcode
-            ADD.B       #$30,D2                 * convert data register # to ASCII digit
-            MOVE.B      D2,(A1)+                * register # to buffer     
-
+            ADD.B       #$30, ea_register       * convert data register # to ASCII digit
+            MOVE.B      ea_register, (A1)+      * register # to buffer     
             MOVE.B      #')',(A1)+              * add ")" to buffer
-             
             RTS                            
 
 *----------------------------Post Increment------------------------
-ea_011:
-            MOVE.W      opcode, D2              * move current working word into temp storage
-
+EA_011:
             MOVE.B      #'(',(A1)+              * add "(" to buffer
             MOVE.B      #'A',(A1)+              * add "A" to buffer
-            
-            MOVE.B      #13, D1
-            LSL.W       D1,D2                   * isolate register bits (last 3)
-            LSR.W       D1,D2                  
-            ADD.B       #$30,D2                 * convert data register # to ASCII digit
-            MOVE.B      D2,(A1)+                * register # to buffer     
-
+            ADD.B       #$30, ea_register       * convert data register # to ASCII digit
+            MOVE.B      ea_register, (A1)+      * register # to buffer 
             MOVE.B      #')',(A1)+              * add ")" to buffer
-            MOVE.B      #'+',(A1)+              * add "+" to buffer
-                 
+            MOVE.B      #'+',(A1)+              * add "+" to buffer 
             RTS                              
 
 *----------------------------Pre Decrement------------------------
-ea_100:
-            MOVE.W      opcode, D2              * move current working word into temp storage
-
+EA_100:
             MOVE.B      #'-',(A1)+              * add "-" to buffer
             MOVE.B      #'(',(A1)+              * add "(" to buffer
             MOVE.B      #'A',(A1)+              * add "A" to buffer
-            
-            MOVE.B      #13, D1
-            LSL.W       D1, D2                   * isolate register bits (last 3)
-            LSR.W       D1, D2                   * D2 now holds the mode of the opcode
-            ADD.B       #$30, D2                 * convert data register # to ASCII digit
-            MOVE.B      D2, (A1)+                * register # to buffer     
-
-            MOVE.B      #')',(A1)+               * add ")" to buffer
-            
+            ADD.B       #$30, ea_register       * convert data register # to ASCII digit
+            MOVE.B      ea_register, (A1)+      * register # to buffer 
+            MOVE.B      #')',(A1)+              * add ")" to buffer
             RTS
 
-*----------------------------Not necessary, go to bad ea------------------------
-ea_101:
+*----------------------------Not necessary, go to bad EA------------------------
+EA_101:
             BRA         INVALID_EA        
 
-
-*----------------------------Not necessary, go to bad ea------------------------
-ea_110:
+*----------------------------Not necessary, go to bad EA------------------------
+EA_110:
             BRA         INVALID_EA        
-
 
 *----------------------------Absolute or immediate address------------------------
-ea_111:
+EA_111:
             * D405      0 0003456  23345245
             * ADD.L     $1234, D0
 
@@ -1158,18 +1238,13 @@ ea_111:
                 * if invalid, branch to invalid opcode subroutine
                     * if the mode is 111, then go back and print out addresses
 
-            MOVE.W      opcode, D2
-            MOVE.B      #13, D1
-            LSL.W       D1, D2                   * isolate register bits (last 3)
-            LSR.W       D1, D2                   * isolate register bits (last 3)
-
-            CMP.B       #%000, D2                * compare to determine if it's a word
+            CMP.B       #%000, ea_register                * compare to determine if it's a word
             BEQ         EA_WORD                  * put word address in buffer
 
-            CMP.B       #%001, D2                * compare to determine if it's a long
+            CMP.B       #%001, ea_register                * compare to determine if it's a long
             BEQ         EA_LONG                  * put long address in buffer
             
-            CMP.B       #%100, D2
+            CMP.B       #%100, ea_register
             BEQ         EA_IMMEDIATE             * always print a long if it's immediate data
 
             * Invalid EA mode/register
@@ -1194,23 +1269,14 @@ EA_LONG:
 EA_IMMEDIATE:
             MOVE.B      #'#', (A1)+
 
-            * if MULS or DIVU, fetch Word from memory
-            CLR.L       D1
-            MOVE.B      opcode, D1          * load first four bits of opcode
+            CMP.B       #0, opSize          
+            BEQ         EA_WORD
 
-            CMP.B       #%1100, D1          * is this MULS?
-            BEQ         TEST_1100           * there are multiple opcodes with this tag
-
-            CMP.B       #%1000, D1          * is this DIVU?
+            CMP.B       #1, opSize          
             BEQ         EA_WORD          
-
-            BRA         EA_LONG             * else, print longword worth of data
-
-TEST_1100:
-            GET_BITS #8, #6                 
-            CMP.B    #%0111, D4
-            BEQ      EA_WORD
-            BRA      EA_LONG
+            
+            CMP.B       #2, opSize
+            BRA         EA_LONG             
 
 GET_EA_DONE:
             RTS
