@@ -8,6 +8,7 @@ OPC_EXAMPLE:
             MOVE.B  #'L',(A1)+
             MOVE.B  #'E',(A1)+
             INSERT_PERIOD
+            INSERT_SPACE
 
             *
             * These three lines get the size of an opcode operation and push it to the buffer
