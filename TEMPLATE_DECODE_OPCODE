@@ -1,0 +1,33 @@
+OPC_EXAMPLE:            
+            * push opcode name to buffer
+            MOVE.B  #'E',(A1)+       
+            MOVE.B  #'X',(A1)+
+            MOVE.B  #'A',(A1)+
+            MOVE.B  #'M',(A1)+
+            MOVE.B  #'P',(A1)+          
+            MOVE.B  #'L',(A1)+
+            MOVE.B  #'E',(A1)+
+            INSERT_PERIOD
+
+            *
+            * ONLY NEED TO INCLUDE IF YOUR OPCODE USES IMMEDIATE ADDRESSING (i.e., do not need to use for Bcc, JSR, RTS, NOP, et.c)
+            * These three lines get the size of an opcode operation and push it to the buffer
+            GET_BITS        #<high bit of size>, #<low bit of size>     * value gets returned in D4
+            MOVE.B          D4, opSize                                  * byte = 0, word = 1, long = 2 NOTE THAT THE SIZE VALUES MAY DIFFER DEPENDING ON THE OPCODE SO YOU WILL HAVE TO CONVERT THE VALUES TO 0/1/2 ACCORDINGLY (look at MOVE for an example). opSize is used to determine the size of immediate data in DECODE_EA.
+            SIZE_TO_BUFFER  D4                                          * put operation size in buffer
+            *
+            
+            * you may have more bits you need to decode here depending on the opcode
+            *
+            * 
+            * 
+            *
+            * Example: Find the first register operand using GET_BITS
+
+            INSERT_COMMA
+            INSERT_SPACE
+
+            * decode ea bits, may need to call earlier depending on operations ordering (i.e., ea + Dn -> en or Dn + ea -> Dn) (i.e., LEA vs ADD)
+            * we are decoding the last six bits. The reason for abstracting is to make it easier to decode move which requires two ea's
+            DECODE_EA       #5, #0
+            BRA             IDENTIFY_OPCODE
