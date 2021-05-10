@@ -10,7 +10,8 @@ Lucas:   Bcc
 
 ## Updates:
 <p>
-Had to abstract DECODE_6_TO_0 to accommodate for MOVE. Now call DECODE_EA as a macro. Pass in two params. See API doc for details.  
+Had to abstract DECODE_6_TO_0 to accommodate for MOVE.  
+Now call DECODE_EA as a macro. Pass in two params. See API doc for details.  
 If your opcode uses immediate addressing, it is necessary to put the size of the opcode operation into opSize. This is so immediate data will print correctly. opSize recognizes a operations of sizes: byte = 0, word = 1, and long = 2. Note that these values may differ depending on the opcode, so you may need to convert in your opc decoding subroutine.   
 I updated the initial GET_INPUT subroutine to simplify the code and put in more error handling.   
 MOVE is implemented.   
