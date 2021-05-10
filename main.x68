@@ -14,9 +14,11 @@
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
 LF          EQU     $0A 
 
-rule1:      DC.B    '1. Addresses must be in the range $FFFFFF > x > $6FFF where x is your given address.', CR, LF, 0 
+rule1:      DC.B    '1. Addresses must be in the range $FFFFFF > x > $6FFF', CR, LF, 0 ' 
+rule1c:     DC.B    'where x is your given address.', CR, LF, 0 '
 rule2:      DC.B    '2. If you use any letters (A-F), make sure they are upper case.', CR, LF, 0
-rule3:      DC.B    '3. If you use constants (DC), make sure you give addresses that does not include that part of memory (only want to parse instructions).', CR, LF, 0
+rule3:      DC.B    '3. If you use constants (DC), make sure you give addresses that', CR, LF, 0 
+rule3c:     DC.B    'do not include that part of memory (only want to parse instructions).', CR, LF, 0
 startMsg:   DC.B    'Please enter a starting address.  ', CR, LF, 0
 endMsg:     DC.B    'Please enter an ending address. ', CR, LF, 0
 doneMsg:    DC.B    'exiting...', CR, LF, 0
@@ -248,8 +250,10 @@ INSERT_DOLLAR:  MACRO
 *-------------------------MAIN------------------------------
 MAIN:
             PRINT_MSG    rule1
+            PRINT_MSG    rule1c                   
             PRINT_MSG    rule2
             PRINT_MSG    rule3
+            PRINT_MSG    rule3c
             BSR          GET_INPUT
             BSR          CHECK_ADDRESS
             BRA          LOAD_ADDRESSES
@@ -1443,3 +1447,8 @@ DONE:
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
+
+*~Font name~Courier New~
+*~Font size~12~
+*~Tab type~0~
+*~Tab size~4~
