@@ -31,7 +31,8 @@ Current Supported Opcodes
   <li> ADD </li>  
   <li> ADDI </li>  
   <li> ADDQ </li>  
-  <li> AND </li>  
+  <li> AND </li> 
+  <li> BRA </li>
   <li> NOP </li>  
   <li> NOT </li>  
   <li> SUB </li>  
@@ -49,6 +50,5 @@ Opcdoes that will be supported in the future:
   <li> MOVEM
   <li> LSL, LSR, ASL, ASR
   <li> Bcc (BLT, BGE, BEQ) 
-  <li> BRA
  </ul>
 </p>
