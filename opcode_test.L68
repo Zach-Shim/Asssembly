@@ -1,6 +1,6 @@
 00007004 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/10/2021 4:40:08 PM
+Created On: 5/11/2021 1:29:39 AM
 
 00000000                             1  *-----------------------------------------------------------
 00000000                             2  * Title      :Testing File
@@ -55,7 +55,7 @@ Created On: 5/10/2021 4:40:08 PM
 00007068                            51  
 00007068  47F8 1234                 52          LEA     $1234,     A3
 0000706C                            53  
-0000706C  4EB9 00007126             54          JSR     DONE
+0000706C  4EB9 0000712E             54          JSR     DONE
 00007072                            55  
 00007072  5600                      56          ADD.B   #3,        D0
 00007074  0686 00123456             57          ADD.L   #$123456,  D6
@@ -107,18 +107,21 @@ Created On: 5/10/2021 4:40:08 PM
 00007114  C079 00AE437B            103          AND.W   $AE437B,   D0
 0000711A  C041                     104          AND.W   D1,        D0
 0000711C  C081                     105          AND.L   D1,        D0
-0000711E                           106  
-0000711E  4685                     107          NOT.L              D5
-00007120  4682                     108          NOT.L              D2
-00007122                           109  
-00007122  4E71                     110          NOP    
-00007124                           111  
-00007124                           112  TEST_JSR_2:
-00007124  4E75                     113          RTS
-00007126                           114  
-00007126                           115  DONE:
-00007126  FFFF FFFF                116              SIMHALT             ; halt simulator
-0000712A                           117          END     MAIN        ; last line of source
+0000711E                           106          
+0000711E  6000 FEE2                107          BRA     TEST_JSR_1
+00007122  6000 0008                108          BRA     TEST_JSR_2
+00007126                           109  
+00007126  4685                     110          NOT.L              D5
+00007128  4682                     111          NOT.L              D2
+0000712A                           112  
+0000712A  4E71                     113          NOP    
+0000712C                           114  
+0000712C                           115  TEST_JSR_2:
+0000712C  4E75                     116          RTS
+0000712E                           117  
+0000712E                           118  DONE:
+0000712E  FFFF FFFF                119              SIMHALT             ; halt simulator
+00007132                           120          END     MAIN        ; last line of source
 
 No errors detected
 No warnings generated
@@ -127,10 +130,10 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DONE                7126
+DONE                712E
 MAIN                7004
 TEST_JSR_1          7002
-TEST_JSR_2          7124
+TEST_JSR_2          712C
 X                   7000
 Y                   7001
 Z                   A8C0

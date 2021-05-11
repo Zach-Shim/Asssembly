@@ -26,6 +26,7 @@ badInput:   DC.B    'Invalid Input', CR, LF, 0
 newline:    DC.B    '', CR, LF, 0
 
 userAddr:   DS.L    1
+            DC.L    0 *Null termination for userAddr
 startAddr:  DS.L    1
 endAddr:    DS.L    1
 
@@ -407,7 +408,7 @@ STORE_INPUT:
 
 
 
-
+            
 *--------------------------PRINT----------------------------
 * Description:
 * Prints hex addresses according to where we are in the .S file
@@ -634,6 +635,9 @@ FIND_OPCODE:
 
             CMP.B   #%0100, opTag 
             BEQ     OPC_0100
+            
+            CMP.B   #%0110, opTag
+            BEQ     OPC_0110
 
             CMP.B   #%0101, opTag 
             BEQ     OPC_0101
@@ -989,6 +993,61 @@ DECODE_QUICK:
 *-----------------------------------------------------------
 
 
+*-----------------------OPC_0110----------------------------
+* First four bits = 0110
+* BRA or Bcc condtions
+*-----------------------------------------------------------
+OPC_0110:
+            GET_BITS #12, #8
+            CMP.B   #0,D4 *Check if opcode is BRA
+            BEQ     OPC_BRA
+            
+            JMP     BAD_OPCODE
+            
+OPC_BRA:
+            MOVE.B  #'B',(A1)+          * Put BRA into Buff
+            MOVE.B  #'R',(A1)+
+            MOVE.B  #'A',(A1)+
+            MOVE.B  #'.',(A1)+
+            
+            GET_BITS #7,#0 *Get displacement bits
+            
+            CMP.B   #0,D4 *Check if we have 16 bit dispalcement, branch if true
+            BEQ     BRA_16_BIT_DISPLACEMENT
+           
+            MOVE.B  #'B',(A1)+
+            INSERT_SPACE 
+            MOVE.B  #'$',(A1)+
+            
+            MOVE.L  A2,D7  *Get the current address
+            
+            EXT.W   D4 *Sign extend to long for addition
+            EXT.L   D4 *Sign extend again, must extend from byte to word and then word to long
+            ADD.L   D4,D7  *Add the displacement
+
+            MOVE.B  #3,D1  *Move a 3 to print long address - it's a parameter of HEX_TO_ASCII
+            JSR     HEX_TO_ASCII ;Convert the address to ascii, and add to buffer for printing
+            
+            BRA IDENTIFY_OPCODE   
+            
+BRA_16_BIT_DISPLACEMENT: 
+            MOVE.B  #'W',(A1)+
+            INSERT_SPACE 
+            MOVE.B  #'$',(A1)+
+            
+            MOVE.L  A2,D7  *Get the current address
+            
+            CLR.L D4 *Clear the contents of D4
+            MOVE.W  (A2)+,D4 *Increment A2 to get 16 bit displacement value
+            
+            EXT.L   D4  *Sign extend to long for addition
+            ADD.L   D4,D7  *Add the displacement 
+                      
+            MOVE.B  #3,D1  *Move a 3 to print long address - it's a parameter of HEX_TO_ASCII
+            JSR     HEX_TO_ASCII ;Convert the address to ascii, and add to buffer for printing
+            
+            BRA IDENTIFY_OPCODE 
+            
 
 *-----------------------OPC_1001----------------------------
 * First four bits = 1001
@@ -1430,8 +1489,7 @@ DONE:
             MOVE.B  #'I',(A1)+         
             MOVE.B  #'M',(A1)+         
             MOVE.B  #'H',(A1)+        
-            MOVE.B  #'A',(A1)+         
-            MOVE.B  #'U',(A1)+         
+            MOVE.B  #'A',(A1)+                 
             MOVE.B  #'L',(A1)+          
             MOVE.B  #'T',(A1)+         
             MOVE.B  #00,(A1)+         
@@ -1447,6 +1505,8 @@ DONE:
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
+
+
 
 *~Font name~Courier New~
 *~Font size~12~
