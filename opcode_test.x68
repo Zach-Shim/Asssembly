@@ -103,6 +103,9 @@ MAIN:
         AND.W   $AE437B,   D0
         AND.W   D1,        D0
         AND.L   D1,        D0
+        
+        BRA     TEST_JSR_1
+        BRA     TEST_JSR_2
 
         NOT.L              D5
         NOT.L              D2
@@ -115,3 +118,7 @@ TEST_JSR_2:
 DONE:
 	SIMHALT             ; halt simulator
         END     MAIN        ; last line of source
+*~Font name~Courier New~
+*~Font size~12~
+*~Tab type~0~
+*~Tab size~4~
