@@ -1002,8 +1002,65 @@ OPC_0110:
             CMP.B   #0,D4 *Check if opcode is BRA
             BEQ     OPC_BRA
             
-            JMP     BAD_OPCODE
+            GET_BITS #11, #8 *Check if opcode is a Bcc condition
             
+            CMP.B   #%1101, D4 *Check if opcode is BLT
+            BEQ     BLT
+            
+            CMP.B   #%1100, D4 *Check if opcode is BGE
+            BEQ     BGE
+            
+            CMP.B   #%0111, D4 *Check if opcode is BEQ
+            BEQ     BEQ
+            
+            JMP     BAD_OPCODE *If no match if found, we have an error
+            
+            
+            
+BLT:
+            MOVE.B  #'B',(A1)+          * Put BLT into Buff
+            MOVE.B  #'L',(A1)+
+            MOVE.B  #'T',(A1)+
+            MOVE.B  #'.',(A1)+
+            BRA     BCC_DISPLACEMENT
+
+BGE:
+            MOVE.B  #'B',(A1)+          * Put BGE into Buff
+            MOVE.B  #'G',(A1)+
+            MOVE.B  #'E',(A1)+
+            MOVE.B  #'.',(A1)+
+            BRA     BCC_DISPLACEMENT
+
+BEQ:
+            MOVE.B  #'B',(A1)+          * Put BEQ into Buff
+            MOVE.B  #'E',(A1)+
+            MOVE.B  #'Q',(A1)+
+            MOVE.B  #'.',(A1)+
+            BRA     BCC_DISPLACEMENT
+
+BCC_DISPLACEMENT:
+            GET_BITS #7,#0 *Get displacement bits
+            
+            CMP.B   #0,D4 *Check if we have 16 bit dispalcement, branch if true
+            BEQ     SIXTEEN_BIT_DISPLACEMENT
+            
+            MOVE.B  #'B',(A1)+
+            INSERT_SPACE 
+            MOVE.B  #'$',(A1)+
+            
+            MOVE.L  A2,D7  *Get the current address
+            
+            EXT.W   D4 *Sign extend to long for addition
+            EXT.L   D4 *Sign extend again, must extend from byte to word and then word to long
+            ADD.L   D4,D7  *Add the displacement
+
+            MOVE.B  #3,D1  *Move a 3 to print long address - it's a parameter of HEX_TO_ASCII
+            JSR     HEX_TO_ASCII ;Convert the address to ascii, and add to buffer for printing
+            
+            BRA IDENTIFY_OPCODE   
+
+             
+                       
 OPC_BRA:
             MOVE.B  #'B',(A1)+          * Put BRA into Buff
             MOVE.B  #'R',(A1)+
@@ -1013,7 +1070,7 @@ OPC_BRA:
             GET_BITS #7,#0 *Get displacement bits
             
             CMP.B   #0,D4 *Check if we have 16 bit dispalcement, branch if true
-            BEQ     BRA_16_BIT_DISPLACEMENT
+            BEQ     SIXTEEN_BIT_DISPLACEMENT
            
             MOVE.B  #'B',(A1)+
             INSERT_SPACE 
@@ -1030,7 +1087,7 @@ OPC_BRA:
             
             BRA IDENTIFY_OPCODE   
             
-BRA_16_BIT_DISPLACEMENT: 
+SIXTEEN_BIT_DISPLACEMENT: 
             MOVE.B  #'W',(A1)+
             INSERT_SPACE 
             MOVE.B  #'$',(A1)+
@@ -1505,6 +1562,7 @@ DONE:
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
+
 
 
 

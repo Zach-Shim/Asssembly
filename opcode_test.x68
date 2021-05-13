@@ -106,6 +106,17 @@ MAIN:
         
         BRA     TEST_JSR_1
         BRA     TEST_JSR_2
+        
+        BLT    TEST_JSR_1
+        BLT    TEST_JSR_2  
+
+        BGE    TEST_JSR_1
+        BGE    TEST_JSR_2   
+        
+        BEQ    TEST_JSR_1
+        BEQ    TEST_JSR_2 
+        
+        LEA     $1234,     A3
 
         NOT.L              D5
         NOT.L              D2
@@ -118,6 +129,7 @@ TEST_JSR_2:
 DONE:
 	SIMHALT             ; halt simulator
         END     MAIN        ; last line of source
+
 *~Font name~Courier New~
 *~Font size~12~
 *~Tab type~0~
