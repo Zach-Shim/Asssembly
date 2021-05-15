@@ -1,6 +1,6 @@
-00007000 Starting Address
+00007004 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/15/2021 1:24:51 PM
+Created On: 5/15/2021 1:37:15 PM
 
 00000000                             1  *-----------------------------------------------------------
 00000000                             2  * Title      :Testing File
@@ -11,85 +11,86 @@ Created On: 5/15/2021 1:24:51 PM
 00000000                             7  
 00007000                             8          ORG     $7000
 00007000                             9  
-00007000                            10  ;x:      DC.B    1
-00007000                            11  ;y:      DC.B    5
-00007000                            12  ;z:      EQU     $A8C0
-00007000                            13  
-00007000                            14  ;TEST_JSR_1:
-00007000                            15          ;RTS
-00007000                            16  
-00007000                            17  MAIN:
-00007000                            18          ; immediate shifts
-00007000  EB02                      19          ASL.B   #5, D2
-00007002  E041                      20          ASR.W   #8, D1
-00007004  E58C                      21          LSL.L   #2, D4
-00007006                            22          
-00007006                            23          ; register shifts
-00007006  E822                      24          ASR.B   D4, D2
-00007008  E765                      25          ASL.W   D3, D5
-0000700A  E26F                      26          LSR.W   D1, D7
-0000700C  E7AE                      27          LSL.L   D3, D6
-0000700E                            28          
-0000700E                            29          ; addressing modes for memory shift
-0000700E  E0D3                      30          ASR.W   (A3)
-00007010  E3DD                      31          LSL.W   (A5)+
-00007012  E0E7                      32          ASR.W   -(A7)
-00007014  E2F8 1234                 33          LSR.W   $1234
-00007018  E1F9 0000FFFF             34          ASL.W   $0000FFFF
-0000701E                            35          
-0000701E                            36  
-0000701E                            37          ;MULS.W  #$0010, D0
-0000701E                            38          ;MULS.W   D0, D1
-0000701E                            39          ;MULS.L  $123456, D1
-0000701E                            40  
-0000701E                            41          ;LEA     $1234, A3
-0000701E                            42  
-0000701E                            43          ;JSR     DONE
-0000701E                            44  
-0000701E                            45          ;ADD.B   #3, D0
-0000701E                            46          ;ADD.L   #$123456, D6
-0000701E                            47          ;ADD.W   #$1234, D6
-0000701E                            48          ;ADD.B   #$34, D6
-0000701E                            49          ;ADD.B   x, D6
-0000701E                            50          ;ADD.W   #z, D6
-0000701E                            51          ;ADD.L   D3, (A4)+
-0000701E                            52          ;ADD.L   (A4)+, D3
-0000701E                            53          ;ADD.L   -(A4), D4
-0000701E                            54          ;ADD.L   D4, -(A4)
-0000701E                            55          ;ADD.L   $ABCD, D5
-0000701E                            56          ;ADD.W   D5, $ABCDEF12
-0000701E                            57          ;ADD.B   D1, D2
-0000701E                            58  
-0000701E                            59          ;SUB.B   #3, D2
-0000701E                            60          ;SUB.L   #$123456, D6
-0000701E                            61          ;SUB.W   #$1234, D6
-0000701E                            62          ;SUB.B   #$34, D6
-0000701E                            63          ;SUB.B   x, D6
-0000701E                            64          ;SUB.W   #z, D6
-0000701E                            65          ;SUB.L   D3, (A4)+
-0000701E                            66          ;SUB.L   (A4)+, D3
-0000701E                            67          ;SUB.L   -(A4), D4
-0000701E                            68          ;SUB.L   D4, -(A4)
-0000701E                            69          ;SUB.L   $ABCD, D5
-0000701E                            70          ;SUB.W   D5, $ABCDEF12
-0000701E                            71          ;SUB.B   D1, D2
-0000701E                            72  
-0000701E                            73          ;AND.L   #$0010, D0
-0000701E                            74          ;AND.W   $AE437B, D0
-0000701E                            75          ;AND.W   D1, D0
-0000701E                            76          ;AND.L   D1, D0
-0000701E                            77  
-0000701E                            78          ;NOT.L   D5
-0000701E                            79          ;NOT.L   D2
-0000701E                            80  
-0000701E                            81          ;NOP    
-0000701E                            82  
-0000701E                            83  TEST_JSR_2:
-0000701E  4E75                      84          RTS
-00007020                            85  
-00007020                            86  DONE:
-00007020  FFFF FFFF                 87          SIMHALT             ; halt simulator
-00007024                            88          END     MAIN        ; last line of source
+00007000= 01                        10  x:      DC.B    1
+00007001= 05                        11  y:      DC.B    5
+00007002  =0000A8C0                 12  z:      EQU     $A8C0
+00007002                            13  
+00007002                            14  TEST_JSR_1:
+00007002  4E75                      15          RTS
+00007004                            16  
+00007004                            17  MAIN:
+00007004                            18          ; immediate shifts
+00007004  EB02                      19          ASL.B   #5, D2
+00007006  E041                      20          ASR.W   #8, D1
+00007008  E58C                      21          LSL.L   #2, D4
+0000700A                            22          
+0000700A                            23          ; register shifts
+0000700A  E822                      24          ASR.B   D4, D2
+0000700C  E765                      25          ASL.W   D3, D5
+0000700E  E26F                      26          LSR.W   D1, D7
+00007010  E7AE                      27          LSL.L   D3, D6
+00007012                            28          
+00007012                            29          ; addressing modes for memory shift
+00007012                            30          ; always word sized
+00007012  E0D3                      31          ASR.W   (A3)
+00007014  E3DD                      32          LSL.W   (A5)+
+00007016  E0E7                      33          ASR.W   -(A7)
+00007018  E2F8 1234                 34          LSR.W   $1234
+0000701C  E1F9 0000FFFF             35          ASL.W   $0000FFFF
+00007022                            36          
+00007022                            37  
+00007022  C1FC 0010                 38          MULS.W  #$0010, D0
+00007026  C3C0                      39          MULS.W   D0, D1
+00007028  C3F9 00123456             40          MULS.W  $123456, D1
+0000702E                            41  
+0000702E  47F8 1234                 42          LEA     $1234, A3
+00007032                            43  
+00007032  4EB9 000070AC             44          JSR     DONE
+00007038                            45  
+00007038  5600                      46          ADD.B   #3, D0
+0000703A  0686 00123456             47          ADD.L   #$123456, D6
+00007040  0646 1234                 48          ADD.W   #$1234, D6
+00007044  0606 0034                 49          ADD.B   #$34, D6
+00007048  DC38 7000                 50          ADD.B   x, D6
+0000704C  0646 A8C0                 51          ADD.W   #z, D6
+00007050  D79C                      52          ADD.L   D3, (A4)+
+00007052  D69C                      53          ADD.L   (A4)+, D3
+00007054  D8A4                      54          ADD.L   -(A4), D4
+00007056  D9A4                      55          ADD.L   D4, -(A4)
+00007058  DAB9 0000ABCD             56          ADD.L   $ABCD, D5
+0000705E  DB79 ABCDEF12             57          ADD.W   D5, $ABCDEF12
+00007064  D401                      58          ADD.B   D1, D2
+00007066                            59  
+00007066  5702                      60          SUB.B   #3, D2
+00007068  0486 00123456             61          SUB.L   #$123456, D6
+0000706E  0446 1234                 62          SUB.W   #$1234, D6
+00007072  0406 0034                 63          SUB.B   #$34, D6
+00007076  9C38 7000                 64          SUB.B   x, D6
+0000707A  0446 A8C0                 65          SUB.W   #z, D6
+0000707E  979C                      66          SUB.L   D3, (A4)+
+00007080  969C                      67          SUB.L   (A4)+, D3
+00007082  98A4                      68          SUB.L   -(A4), D4
+00007084  99A4                      69          SUB.L   D4, -(A4)
+00007086  9AB9 0000ABCD             70          SUB.L   $ABCD, D5
+0000708C  9B79 ABCDEF12             71          SUB.W   D5, $ABCDEF12
+00007092  9401                      72          SUB.B   D1, D2
+00007094                            73  
+00007094  C0BC 00000010             74          AND.L   #$0010, D0
+0000709A  C079 00AE437B             75          AND.W   $AE437B, D0
+000070A0  C041                      76          AND.W   D1, D0
+000070A2  C081                      77          AND.L   D1, D0
+000070A4                            78  
+000070A4  4685                      79          NOT.L   D5
+000070A6  4682                      80          NOT.L   D2
+000070A8                            81  
+000070A8  4E71                      82          NOP    
+000070AA                            83  
+000070AA                            84  TEST_JSR_2:
+000070AA  4E75                      85          RTS
+000070AC                            86  
+000070AC                            87  DONE:
+000070AC  FFFF FFFF                 88          SIMHALT             ; halt simulator
+000070B0                            89          END     MAIN        ; last line of source
 
 No errors detected
 No warnings generated
@@ -98,6 +99,10 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DONE                7020
-MAIN                7000
-TEST_JSR_2          701E
+DONE                70AC
+MAIN                7004
+TEST_JSR_1          7002
+TEST_JSR_2          70AA
+X                   7000
+Y                   7001
+Z                   A8C0

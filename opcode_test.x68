@@ -7,12 +7,12 @@
 
         ORG     $7000
 
-;x:      DC.B    1
-;y:      DC.B    5
-;z:      EQU     $A8C0
+x:      DC.B    1
+y:      DC.B    5
+z:      EQU     $A8C0
 
-;TEST_JSR_1:
-        ;RTS
+TEST_JSR_1:
+        RTS
 
 MAIN:
         ; immediate shifts
@@ -37,7 +37,7 @@ MAIN:
 
         MULS.W  #$0010, D0
         MULS.W   D0, D1
-        MULS.L  $123456, D1
+        MULS.W  $123456, D1
 
         LEA     $1234, A3
 
