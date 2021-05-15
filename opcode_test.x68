@@ -7,17 +7,37 @@
 
         ORG     $7000
 
-x:      DC.B    1
-y:      DC.B    5
-z:      EQU     $A8C0
+;x:      DC.B    1
+;y:      DC.B    5
+;z:      EQU     $A8C0
 
-TEST_JSR_1:
-        RTS
+;TEST_JSR_1:
+        ;RTS
 
 MAIN:
-        ;MULS.W  #$0010, D0
-        ;MULS.W   D0, D1
-        ;MULS.L  $123456, D1
+        ; immediate shifts
+        ASL.B   #5, D2
+        ASR.W   #8, D1
+        LSL.L   #2, D4
+        
+        ; register shifts
+        ASR.B   D4, D2
+        ASL.W   D3, D5
+        LSR.W   D1, D7
+        LSL.L   D3, D6
+        
+        ; addressing modes for memory shift
+        ; always word sized
+        ASR.W   (A3)
+        LSL.W   (A5)+
+        ASR.W   -(A7)
+        LSR.W   $1234
+        ASL.W   $0000FFFF
+        
+
+        MULS.W  #$0010, D0
+        MULS.W   D0, D1
+        MULS.L  $123456, D1
 
         LEA     $1234, A3
 
@@ -67,6 +87,7 @@ TEST_JSR_2:
 DONE:
 		SIMHALT             ; halt simulator
         END		MAIN        ; last line of source
+
 
 
 
