@@ -642,6 +642,9 @@ FIND_OPCODE:
             CMP.B   #%0101, opTag 
             BEQ     OPC_0101
 
+            CMP.B   #%0111, opTag 
+            BEQ     OPC_0111
+
             CMP.B   #%1000, opTag
             BEQ     OPC_1000
 
@@ -924,8 +927,35 @@ OPC_MOVEM:
 
 *------------------------------------------------------------------
 
+*---------------------------OPC_0111------------------------
+* First four bits = 0111
+* (MOVEQ)
+*-----------------------------------------------------------
+OPC_0111:
+            MOVE.B  #'M',(A1)+      
+            MOVE.B  #'O',(A1)+ 
+            MOVE.B  #'V',(A1)+
+            MOVE.B  #'E',(A1)+      
+            MOVE.B  #'Q',(A1)+ 
+            INSERT_PERIOD
+            MOVE.B  #'B',(A1)+
+            INSERT_SPACE
+
+            * push immediate byte value to buffer
+            GET_BITS        #7, #0
+            VALUE_TO_BUFFER D4 
+
+            INSERT_COMMA
+            INSERT_SPACE
+
+            * push register to buffer
+            MOVE.B          #'D',(A1)+
+            GET_BITS        #11, #9 
+            VALUE_TO_BUFFER D4
+*-----------------------------------------------------------
+
 *---------------------------OPC_1000------------------------
-* First four bits = 1001
+* First four bits = 1000
 * (DIVU)
 *-----------------------------------------------------------
 OPC_1000:   * keeping this in case there's more that start with 1000

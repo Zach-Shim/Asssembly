@@ -15,6 +15,10 @@ TEST_JSR_1:
         RTS
 
 MAIN:
+        MOVE.B  #1, D0
+        MOVE.B  #$AC, D3
+        MOVE.B  #$FF, D5
+        
         MOVEM.L D0, -(SP)
         MOVEM.L (SP)+, D0
 
