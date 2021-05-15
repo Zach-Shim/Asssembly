@@ -49,13 +49,6 @@ MAIN:
         ADD.B   #$34, D6
         ADD.B   x, D6
         ADD.W   #z, D6
-        ADD.L   D3, (A4)+
-        ADD.L   (A4)+, D3
-        ADD.L   -(A4), D4
-        ADD.L   D4, -(A4)
-        ADD.L   $ABCD, D5
-        ADD.W   D5, $ABCDEF12
-        ADD.B   D1, D2
 
         SUB.B   #3, D2
         SUB.L   #$123456, D6
@@ -83,18 +76,9 @@ MAIN:
 
 TEST_JSR_2:
         RTS
-
 DONE:
 		SIMHALT             ; halt simulator
         END		MAIN        ; last line of source
-
-
-
-
-
-
-
-
 
 
 *~Font name~Courier New~
