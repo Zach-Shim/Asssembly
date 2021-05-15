@@ -1,6 +1,6 @@
 00007004 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/15/2021 1:55:33 PM
+Created On: 5/15/2021 3:07:50 PM
 
 00000000                             1  *-----------------------------------------------------------
 00000000                             2  * Title      :Testing File
@@ -45,7 +45,7 @@ Created On: 5/15/2021 1:55:33 PM
 0000702E                            41  
 0000702E  47F8 1234                 42          LEA     $1234, A3
 00007032                            43  
-00007032  4EB9 000070AC             44          JSR     DONE
+00007032  4EB9 00007096             44          JSR     DONE
 00007038                            45  
 00007038  5600                      46          ADD.B   #3, D0
 0000703A  0686 00123456             47          ADD.L   #$123456, D6
@@ -53,44 +53,36 @@ Created On: 5/15/2021 1:55:33 PM
 00007044  0606 0034                 49          ADD.B   #$34, D6
 00007048  DC38 7000                 50          ADD.B   x, D6
 0000704C  0646 A8C0                 51          ADD.W   #z, D6
-00007050  D79C                      52          ADD.L   D3, (A4)+
-00007052  D69C                      53          ADD.L   (A4)+, D3
-00007054  D8A4                      54          ADD.L   -(A4), D4
-00007056  D9A4                      55          ADD.L   D4, -(A4)
-00007058  DAB9 0000ABCD             56          ADD.L   $ABCD, D5
-0000705E  DB79 ABCDEF12             57          ADD.W   D5, $ABCDEF12
-00007064  D401                      58          ADD.B   D1, D2
-00007066                            59  
-00007066  5702                      60          SUB.B   #3, D2
-00007068  0486 00123456             61          SUB.L   #$123456, D6
-0000706E  0446 1234                 62          SUB.W   #$1234, D6
-00007072  0406 0034                 63          SUB.B   #$34, D6
-00007076  9C38 7000                 64          SUB.B   x, D6
-0000707A  0446 A8C0                 65          SUB.W   #z, D6
-0000707E  979C                      66          SUB.L   D3, (A4)+
-00007080  969C                      67          SUB.L   (A4)+, D3
-00007082  98A4                      68          SUB.L   -(A4), D4
-00007084  99A4                      69          SUB.L   D4, -(A4)
-00007086  9AB9 0000ABCD             70          SUB.L   $ABCD, D5
-0000708C  9B79 ABCDEF12             71          SUB.W   D5, $ABCDEF12
-00007092  9401                      72          SUB.B   D1, D2
-00007094                            73  
-00007094  C0BC 00000010             74          AND.L   #$0010, D0
-0000709A  C079 00AE437B             75          AND.W   $AE437B, D0
-000070A0  C041                      76          AND.W   D1, D0
-000070A2  C081                      77          AND.L   D1, D0
-000070A4                            78  
-000070A4  4685                      79          NOT.L   D5
-000070A6  4682                      80          NOT.L   D2
-000070A8                            81  
-000070A8  4E71                      82          NOP    
-000070AA                            83  
-000070AA                            84  TEST_JSR_2:
-000070AA  4E75                      85          RTS
-000070AC                            86  
-000070AC                            87  DONE:
-000070AC  FFFF FFFF                 88          SIMHALT             ; halt simulator
-000070B0                            89          END     MAIN        ; last line of source
+00007050                            52  
+00007050  5702                      53          SUB.B   #3, D2
+00007052  0486 00123456             54          SUB.L   #$123456, D6
+00007058  0446 1234                 55          SUB.W   #$1234, D6
+0000705C  0406 0034                 56          SUB.B   #$34, D6
+00007060  9C38 7000                 57          SUB.B   x, D6
+00007064  0446 A8C0                 58          SUB.W   #z, D6
+00007068  979C                      59          SUB.L   D3, (A4)+
+0000706A  969C                      60          SUB.L   (A4)+, D3
+0000706C  98A4                      61          SUB.L   -(A4), D4
+0000706E  99A4                      62          SUB.L   D4, -(A4)
+00007070  9AB9 0000ABCD             63          SUB.L   $ABCD, D5
+00007076  9B79 ABCDEF12             64          SUB.W   D5, $ABCDEF12
+0000707C  9401                      65          SUB.B   D1, D2
+0000707E                            66  
+0000707E  C0BC 00000010             67          AND.L   #$0010, D0
+00007084  C079 00AE437B             68          AND.W   $AE437B, D0
+0000708A  C041                      69          AND.W   D1, D0
+0000708C  C081                      70          AND.L   D1, D0
+0000708E                            71  
+0000708E  4685                      72          NOT.L   D5
+00007090  4682                      73          NOT.L   D2
+00007092                            74  
+00007092  4E71                      75          NOP    
+00007094                            76  
+00007094                            77  TEST_JSR_2:
+00007094  4E75                      78          RTS
+00007096                            79  DONE:
+00007096  FFFF FFFF                 80          SIMHALT             ; halt simulator
+0000709A                            81          END     MAIN        ; last line of source
 
 No errors detected
 No warnings generated
@@ -99,10 +91,10 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DONE                70AC
+DONE                7096
 MAIN                7004
 TEST_JSR_1          7002
-TEST_JSR_2          70AA
+TEST_JSR_2          7094
 X                   7000
 Y                   7001
 Z                   A8C0

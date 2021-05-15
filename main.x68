@@ -1241,8 +1241,7 @@ SHIFT_MODES:
 SHIFT_REG_OR_IMM: ; register and immediate shifts
             
             ; get the size
-            MOVE.B  D4,D3
-            JSR     SIZE_TO_BUFFER
+            SIZE_TO_BUFFER D4
             
             
             ; get the i/r bit to determine immediate/register
@@ -1309,7 +1308,7 @@ SHIFT_MEM_MODE: ; memory shifts
             MOVE.B  #'W',(A1)+      ; always word sized
             MOVE.B  #' ',(A1)+
             
-            JSR     GET_EA_MODE
+            DECODE_EA #5, #0
             BRA     IDENTIFY_OPCODE
 
 
@@ -1685,6 +1684,7 @@ DONE:
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
+
 
 
 
