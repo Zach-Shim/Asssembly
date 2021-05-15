@@ -279,26 +279,54 @@ MAIN:
 *-----------------------------------------------------------
 *-------------------------Get Input-------------------------
 GET_INPUT:
+            CLR.L        D3
+            CLR.L        D4
             PRINT_MSG    startMsg
             BSR          GET_ADDRESS   
+            CMP          #1, D4
+            BEQ          RESTART_INPUT
             MOVE.L       D7, startAddr
 
-            CLR_D_REGS
 
+            CLR.L        D3
+            CLR.L        D4
             PRINT_MSG    endMsg
             BSR          GET_ADDRESS   
+            CMP          #1, D4
+            BEQ          RESTART_INPUT
             MOVE.L       D7, endAddr
-            RTS 
+
+            BSR          CHECK_ADDRESS
+            CMP          #1, D4
+            BEQ          RESTART_INPUT
+
+            RTS
+
+RESTART_INPUT:
+            BRA        GET_INPUT
 *-----------------------------------------------------------
 
 *------------------------Get Address------------------------
 GET_ADDRESS:
+            * ask for input
             LEA.L   userAddr, A1
             MOVE.B  #2, D0
             TRAP    #15
 
+            * error checking - length
             BSR     CHECK_LENGTH
+            CMP     #1, D4
+            BEQ     RETURN_TO_INPUT
+
+            * error checking - valid characters
             BSR     CONVERT_TO_HEX
+            CMP     #1, D4
+            BEQ     RETURN_TO_INPUT
+
+            CLR.L   D4
+            RTS
+
+RETURN_TO_INPUT:
             RTS
 *-----------------------------------------------------------
 
@@ -323,24 +351,29 @@ GET_ADDRESS:
 * Registers Used:
 *   D0 = task values
 *   D1 = stores of size of ascii string in A1 from user input
-*   D4 = bool check (0 = starting address, 1 = ending address, 2 = done)
+*   D4 = bool check (1 = FALSE, 0 = TRUE)
 *   A1 = stores an ascii string from user input
 *-----------------------------------------------------------
 
 *----------------------VALIDATE INPUT---------------------------      
 CHECK_LENGTH:
+            CLR.L      D4
+
             CMP.B      #1, D1               ; for task 2, length of string is in D1                
             BLT        INVALID_INPUT 
-            CMP.B      #8, D1               ; address can either be 4 or 8 bits in length  
+
+            CMP.B      #6, D1               ; address can either be 4 or 8 bits in length  
             BGT        INVALID_INPUT
+
             RTS
 
 INVALID_INPUT:  
             PRINT_MSG  badInput
-            BRA        GET_INPUT
+            MOVE.B     #1, D4
+            RTS
 *-----------------------------------------------------------
 
-*----------------------VALIDATE INPUT---------------------------      
+*----------------------CHECK ADDRESS------------------------      
 CHECK_ADDRESS:
             MOVE.L     startAddr, D5
             CMP.L      endAddr, D5          ; starting address >= ending address?
@@ -355,7 +388,8 @@ CHECK_ADDRESS:
 
 INVALID_ADDRESS:  
             PRINT_MSG  badInput
-            BRA        GET_INPUT
+            MOVE.B     #1, D4
+            RTS
 *-----------------------------------------------------------
 
 *----------------CONVERT FROM ASCII TO HEX------------------
@@ -824,16 +858,22 @@ OPC_0100:
             * Check if the opcode is LEA
             MOVE.W   opcode, D4             * Put opcode in D4 to use the macro get bits
             GET_BITS #8, #6 
-            CMP.B    #%0111, D4              * if bits 6-8 are equal to 111, then the opocde is LEA
+            CMP.B    #%111, D4              * if bits 8-6 are equal to 111, then the opocde is LEA
             BEQ      OPC_LEA
 
             * Check if the opcode is JSR
-            CMP.B   #%0010, D4              * if bits 6-8 are equal to 010, then the opocde is LEA
-            BEQ     OPC_JSR
+            MOVE.W   opcode, D4             * Put opcode in D4 to use the macro get bits
+            GET_BITS #9, #7 
+            CMP.B    #%101, D4              * if bits 9-7 are equal to 010, then the opocde is LEA
+            BEQ      OPC_JSR
 
             * Check if the opcode is RTS
-            CMP.B   #%0001, D4              * if bits 6-8 are equal to 001, then the opocde is LEA
-            BEQ     OPC_RTS
+            CMP.B    #%100, D4              
+            BEQ      OPC_RTS
+
+            * Check if the opcode is MOVEM
+            CMP.B    #%001, D4              
+            BEQ      OPC_MOVEM
 
 *---------------------------OPC_NOP--------------------------------
 
@@ -881,10 +921,7 @@ OPC_LEA:
 
             BRA IDENTIFY_OPCODE    
 
-
-*-----------------------------------------------------------
-
-*-----------------------------OPC_JSR------------------------------
+*-----------------------------OPC_JSR-----------------------------
 OPC_JSR:
             * Put LEA into A1 buffer for printing
             MOVE.B  #'J',(A1)+      
@@ -904,7 +941,20 @@ OPC_RTS:
         
             BRA IDENTIFY_OPCODE
 
-*-----------------------------------------------------------
+*-------------------------OPC_MOVEM--------------------------------
+OPC_MOVEM:
+            MOVE.B  #'M',(A1)+      
+            MOVE.B  #'O',(A1)+ 
+            MOVE.B  #'V',(A1)+
+            MOVE.B  #'E',(A1)+      
+            MOVE.B  #'M',(A1)+ 
+            INSERT_PERIOD
+            INSERT_SPACE
+
+            JSR     DECODE_MOVEM
+            BRA     IDENTIFY_OPCODE
+
+*------------------------------------------------------------------
 
 *---------------------------OPC_1000------------------------
 * First four bits = 1001
@@ -1015,8 +1065,6 @@ OPC_0110:
             
             JMP     BAD_OPCODE *If no match if found, we have an error
             
-            
-            
 BLT:
             MOVE.B  #'B',(A1)+          * Put BLT into Buff
             MOVE.B  #'L',(A1)+
@@ -1058,8 +1106,6 @@ BCC_DISPLACEMENT:
             JSR     HEX_TO_ASCII ;Convert the address to ascii, and add to buffer for printing
             
             BRA IDENTIFY_OPCODE   
-
-             
                        
 OPC_BRA:
             MOVE.B  #'B',(A1)+          * Put BRA into Buff
@@ -1103,7 +1149,7 @@ SIXTEEN_BIT_DISPLACEMENT:
             MOVE.B  #3,D1  *Move a 3 to print long address - it's a parameter of HEX_TO_ASCII
             JSR     HEX_TO_ASCII ;Convert the address to ascii, and add to buffer for printing
             
-            BRA IDENTIFY_OPCODE 
+            BRA     IDENTIFY_OPCODE 
             
 
 *-----------------------OPC_1001----------------------------
@@ -1239,6 +1285,244 @@ GET_DATA_REG_NUM:
 *-----------------------------------------------------------
 
 
+
+
+
+
+
+
+
+
+
+*----------------------DECODE_MOVEM-------------------------
+* Description:
+* Parses bits for MOVEM 
+*
+* Parameters:
+*   None
+*
+* Registers Used:
+*   D1 = holds next word from memory (word represents register list mask)
+*   D2 = temp variable to hold iteration values in LOOP_LIST
+*   D3 = determines if we are currrently parsing data regs or address regs
+*   D4 = holds returned value from GET_BITS
+*   D5 = holds dr field (direction of transfer)
+*   D6 = holds low bit for register list 
+*   D7 = holds high bit for register list 
+*-----------------------------------------------------------
+DECODE_MOVEM:
+            CLR_D_REGS
+
+            BSR             MOVEM_SIZE
+            MOVE.B          D4, opSize
+            SIZE_TO_BUFFER  D4
+
+            BSR             MOVEM_BR
+
+*-----------------------------------------------------------
+MOVEM_SIZE:
+            * move size of operation to opSize
+            GET_BITS  #6, #6
+
+            CMP.B     #0, D4
+            BEQ       MOVEM_PUSH_WORD
+
+            CMP.B     #1, D4
+            BEQ       MOVEM_PUSH_LONG
+
+MOVEM_PUSH_WORD:
+            MOVE.B    #1, D4
+            BRA       MOVEM_SIZE_DONE
+
+MOVEM_PUSH_LONG:
+            MOVE.B    #2, D4
+            BRA       MOVEM_SIZE_DONE
+
+MOVEM_SIZE_DONE:
+            RTS
+*-----------------------------------------------------------
+MOVEM_BR:
+            * move dr of operation to D5
+            GET_BITS  #10, #10
+            MOVE.B    D4, D5
+
+            CMP.B     #0, D5            * register -> memory
+            BEQ       REG_TO_MEM
+            CMP.B     #1, D5            * memory -> register
+            BEQ       MEM_TO_REG
+*-----------------------------------------------------------
+REG_TO_MEM:
+            BSR       DECODE_PREDEC
+            CLR_D_REGS
+            DECODE_EA #5, #0
+            BRA       DONE_MOVEM
+
+MEM_TO_REG:
+            DECODE_EA #5, #0
+            CLR_D_REGS
+            BSR       DECODE_POSTINC
+            BRA       DONE_MOVEM
+
+DONE_MOVEM:
+            RTS
+*-----------------------------------------------------------
+DECODE_PREDEC:
+            * bring in the next word from memory, which represents the register list mask
+            MOVE.W    (A2)+, D1
+            
+            MOVE.L    #0, D3
+            BSR       CLR_CHECK_REGS
+            BSR       DECODE_LIST_MASK_PRE
+
+            MOVE.L    #1, D3
+            BSR       CLR_CHECK_REGS
+            BSR       DECODE_LIST_MASK_PRE
+            RTS
+            
+CLR_CHECK_REGS:
+            * fill with error checking values
+            MOVE.L    #-1, D2
+            MOVE.L    #-1, D6
+            MOVE.L    #-1, D7
+            RTS
+*-----------------------------------------------------------
+DECODE_LIST_MASK_PRE:
+            BSR       FIND_HIGH_TO_LOW_BITS
+
+            CMP.B     #0, D3
+            BEQ       DATA_REG_LIST
+
+            CMP.B     #1, D3
+            BEQ       ADDR_REG_LIST
+
+DATA_REG_LIST:
+            CMP.B     #-1, D6
+            BEQ       NO_MORE_REGS
+            BSR       PUSH_LOW_DATA_BIT
+
+            CMP.B     #-1, D7
+            BEQ       NO_MORE_REGS
+            BSR       PUSH_HIGH_DATA_BIT
+
+            BRA       NO_MORE_REGS
+
+PUSH_LOW_DATA_BIT:
+            MOVE.B    #'D',(A1)+              * add "D" to buffer
+            ADD.B     #$30, D6                * convert data register # to ASCII digit
+            MOVE.B    D6, (A1)+               * register # to buffer
+            RTS
+
+PUSH_HIGH_DATA_BIT:
+            MOVE.B    #'-',(A1)+              * add "D" to buffer
+            MOVE.B    #'D',(A1)+              * add "D" to buffer
+            ADD.B     #$30, D7                * convert data register # to ASCII digit
+            MOVE.B    D7, (A1)+               * register # to buffer
+            RTS
+
+ADDR_REG_LIST:
+            CMP.B     #-1, D6
+            BEQ       NO_MORE_REGS
+            BSR       PUSH_LOW_ADDR_BIT
+
+            CMP.B     #-1, D7
+            BEQ       NO_MORE_REGS
+            BSR       PUSH_HIGH_ADDR_BIT
+
+            BRA       NO_MORE_REGS
+
+PUSH_LOW_ADDR_BIT:
+            MOVE.B    #'/',(A1)+              
+            MOVE.B    #'A',(A1)+              
+            ADD.B     #$30, D6                * convert data register # to ASCII digit
+            MOVE.B    D6, (A1)+               
+            RTS
+
+PUSH_HIGH_ADDR_BIT:
+            MOVE.B    #'-',(A1)+              
+            MOVE.B    #'A',(A1)+              
+            ADD.B     #$30, D7                * convert data register # to ASCII digit
+            MOVE.B    D7, (A1)+               
+            RTS
+
+NO_MORE_REGS:
+            RTS
+*-----------------------------------------------------------  
+FIND_HIGH_TO_LOW_BITS:
+            * shift left to detect carry. If 1 is carried out, that means there is a register there
+            ASL.W     #1, D1
+            BCS       CHECK_BIT
+            ADD.B     #1, D2
+            
+            CMP.B     #7, D2                * only parse 8 (0 based) data registers or address registers
+            BEQ       NO_MORE_BITS
+            BRA       FIND_HIGH_TO_LOW_BITS
+
+CHECK_BIT:
+            * has a low bit register value not been stored yet?
+            CMP       #-1, D6
+            BEQ       STORE_LOW_BIT
+            BRA       STORE_HIGH_BIT
+
+STORE_HIGH_BIT:
+            MOVE.B    D2, D7
+            BRA       FIND_HIGH_TO_LOW_BITS
+
+STORE_LOW_BIT:
+            MOVE.B    D2, D6
+            BRA       FIND_HIGH_TO_LOW_BITS
+
+NO_MORE_BITS:
+            RTS
+*-----------------------------------------------------------
+
+
+DECODE_POSTINC:
+            * bring in the next word from memory, which represents the register list mask
+            MOVE.W    (A2)+, D1
+            
+            MOVE.L    #0, D3
+            BSR       CLR_CHECK_REGS
+            BSR       DECODE_LIST_MASK_POST
+
+            MOVE.L    #1, D3
+            BSR       CLR_CHECK_REGS
+            BSR       DECODE_LIST_MASK_POST
+
+DECODE_LIST_MASK_POST:
+            BSR       FIND_LOW_TO_HIGH_BITS
+
+            CMP.B     #0, D3
+            BEQ       ADDR_REG_LIST 
+
+            CMP.B     #1, D3
+            BEQ       DATA_REG_LIST
+
+FIND_LOW_TO_HIGH_BITS:
+            * shift left to detect carry. If 1 is carried out, that means there is a register there
+            ASR.W     #1, D1
+            BCS       CHECK_BIT_POST
+            ADD.B     #1, D2
+            
+            CMP.B     #7, D2            # only parse 8 (0 based) data registers or address registers
+            BEQ       NO_MORE_BITS_POST
+            BRA       FIND_LOW_TO_HIGH_BITS
+
+CHECK_BIT_POST:
+            * has a low bit register value not been stored yet?
+            CMP       #-1, D6
+            BEQ       STORE_LOW_BIT_POST
+            BRA       STORE_HIGH_BIT_POST
+
+STORE_LOW_BIT_POST:
+            MOVE.B    D2, D6
+            BRA       FIND_LOW_TO_HIGH_BITS
+
+STORE_HIGH_BIT_POST:
+            MOVE.B    D2, D7
+            BRA       FIND_LOW_TO_HIGH_BITS
+
+NO_MORE_BITS_POST:
+            RTS
 
 
 
