@@ -828,12 +828,18 @@ OPC_0100:
             BEQ      OPC_LEA
 
             * Check if the opcode is JSR
-            CMP.B   #%0010, D4              * if bits 6-8 are equal to 010, then the opocde is LEA
-            BEQ     OPC_JSR
+            MOVE.W   opcode, D4             * Put opcode in D4 to use the macro get bits
+            GET_BITS #9, #7 
+            CMP.B    #%101, D4              * if bits 9-7 are equal to 010, then the opocde is LEA
+            BEQ      OPC_JSR
 
             * Check if the opcode is RTS
-            CMP.B   #%0001, D4              * if bits 6-8 are equal to 001, then the opocde is LEA
-            BEQ     OPC_RTS
+            CMP.B    #%100, D4              
+            BEQ      OPC_RTS
+
+            * Check if the opcode is MOVEM
+            CMP.B    #%001, D4              
+            BEQ      OPC_MOVEM
 
 *---------------------------OPC_NOP--------------------------------
 
@@ -904,7 +910,19 @@ OPC_RTS:
         
             BRA IDENTIFY_OPCODE
 
-*-----------------------------------------------------------
+*-------------------------OPC_MOVEM--------------------------------
+OPC_MOVEM:
+            MOVE.B  #'M',(A1)+      
+            MOVE.B  #'O',(A1)+ 
+            MOVE.B  #'V',(A1)+
+            MOVE.B  #'E',(A1)+      
+            MOVE.B  #'M',(A1)+ 
+            INSERT_PERIOD
+
+            JSR     DECODE_MOVEM
+            BRA     IDENTIFY_OPCODE
+
+*------------------------------------------------------------------
 
 *---------------------------OPC_1000------------------------
 * First four bits = 1001
@@ -1236,6 +1254,262 @@ GET_DATA_REG_NUM:
             MOVE.B            #'D',(A1)+                  * add "D" to buffer
             VALUE_TO_BUFFER   D4          
             RTS
+*-----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+*----------------------DECODE_MOVEM-------------------------
+* Description:
+* Parses bits for MOVEM 
+*
+* Parameters:
+*   None
+*
+* Registers Used:
+*   D1 = holds next word from memory (word represents register list mask)
+*   D2 = temp variable to hold iteration values in LOOP_LIST
+*   D3 = determines if we need a '/'
+*   D4 = holds returned value from GET_BITS
+*   D5 = holds dr field (direction of transfer)
+*   D6 = holds low bit for register list 
+*   D7 = holds high bit for register list 
+*-----------------------------------------------------------
+DECODE_MOVEM:
+            CLR_D_REGS
+
+            BSR             MOVEM_SIZE
+            MOVE.B          D4, opSize
+            SIZE_TO_BUFFER  D4
+
+            BSR             MOVEM_BR
+            RTS
+*-----------------------------------------------------------
+MOVEM_SIZE:
+            * move size of operation to opSize
+            GET_BITS  #6, #6
+
+            CMP.B     #0, D4
+            BEQ       MOVEM_PUSH_WORD
+
+            CMP.B     #1, D4
+            BEQ       MOVEM_PUSH_LONG
+
+MOVEM_PUSH_WORD:
+            MOVE.B    #1, D4
+            BRA       MOVEM_SIZE_DONE
+
+MOVEM_PUSH_LONG:
+            MOVE.B    #2, D4
+            BRA       MOVEM_SIZE_DONE
+
+MOVEM_SIZE_DONE:
+            RTS
+*-----------------------------------------------------------
+MOVEM_BR:
+            * move dr of operation to D5
+            GET_BITS  #10, #10
+            MOVE.B    D4, D5
+
+            CMP.B     #0, D5            * register -> memory
+            BEQ       REG_TO_MEM
+            CMP.B     #1, D5            * memory -> register
+            BEQ       MEM_TO_REG
+*-----------------------------------------------------------
+REG_TO_MEM:
+            BSR       DECODE_PREDEC
+            INSERT_COMMA
+            INSERT_SPACE
+            CLR_D_REGS
+            DECODE_EA #5, #0
+            BRA       DONE_MOVEM
+
+MEM_TO_REG:
+            DECODE_EA #5, #0
+            INSERT_COMMA
+            INSERT_SPACE
+            CLR_D_REGS
+            BSR       DECODE_POSTINC
+            BRA       DONE_MOVEM
+
+DONE_MOVEM:
+            RTS
+*-----------------------------------------------------------
+DECODE_PREDEC:
+            * bring in the next word from memory, which represents the register list mask
+            MOVE.W    (A2)+, D1
+            BSR       DECODE_LIST_MASK_PRE
+            RTS
+            
+CLR_CHECK_REGS:
+            * fill with error checking values
+            MOVE.B    #-1, D2
+            MOVE.B    #-1, D6
+            MOVE.B    #-1, D7
+            RTS
+*-----------------------------------------------------------
+DECODE_LIST_MASK_PRE:
+            BSR       CLR_CHECK_REGS
+            BSR       FIND_HIGH_TO_LOW_BITS
+            BSR       DATA_REG_LIST
+
+            BSR       CLR_CHECK_REGS
+            BSR       FIND_HIGH_TO_LOW_BITS
+            BSR       ADDR_REG_LIST
+            RTS
+*-----------------------------------------------------------  
+DATA_REG_LIST:
+            * if there was a low bit found, branch to low bit sr, if there was no low bit found, branch to high bit sr 
+            CMP.B     #-1, D6
+            BNE       PUSH_LOW_DATA_BIT
+            CMP.B     #-1, D7
+            BNE       PUSH_HIGH_DATA_BIT
+            BRA       NO_MORE_REGS
+
+PUSH_LOW_DATA_BIT:
+            MOVE.L    #1, D3
+            MOVE.B    #'D',(A1)+              * add "D" to buffer
+            ADD.B     #$30, D6                * convert data register # to ASCII digit
+            MOVE.B    D6, (A1)+               * register # to buffer
+            
+            * was there more than one register?
+            CMP.B     #-1, D7
+            BNE       PUSH_HIGH_DATA_BIT  
+
+            BRA       NO_MORE_REGS
+
+PUSH_HIGH_DATA_BIT:
+            MOVE.B    #'-',(A1)+             
+            MOVE.B    #'D',(A1)+              * add "D" to buffer
+            ADD.B     #$30, D7                * convert data register # to ASCII digit
+            MOVE.B    D7, (A1)+               * register # to buffer
+            
+            BRA       NO_MORE_REGS
+*-----------------------------------------------------------  
+ADDR_REG_LIST:
+            * if there was a low bit found, branch to low bit sr, if there was no low bit found, branch to high bit sr 
+            CMP.B     #-1, D6
+            BNE       PUSH_LOW_ADDR_BIT
+            CMP.B     #-1, D7
+            BNE       PUSH_HIGH_ADDR_BIT
+            BRA       NO_MORE_REGS
+
+PUSH_LOW_ADDR_BIT:
+            CMP.B     #1, D3
+            BEQ       ADD_SLASH
+            BRA       NO_SLASH
+
+ADD_SLASH:
+            MOVE.B    #'/',(A1)+
+
+NO_SLASH:
+            MOVE.B    #'A',(A1)+              
+            ADD.B     #$30, D6                * convert data register # to ASCII digit
+            MOVE.B    D6, (A1)+               
+            
+            * was there more than one register?
+            CMP.B     #-1, D7
+            BNE       PUSH_HIGH_ADDR_BIT  
+            BRA       NO_MORE_REGS
+
+PUSH_HIGH_ADDR_BIT:
+            MOVE.B    #'-',(A1)+              
+            MOVE.B    #'A',(A1)+              
+            ADD.B     #$30, D7                * convert data register # to ASCII digit
+            MOVE.B    D7, (A1)+        
+
+            BRA       NO_MORE_REGS       
+            
+NO_MORE_REGS:
+            RTS
+*-----------------------------------------------------------  
+FIND_HIGH_TO_LOW_BITS:
+
+            * only parse 8 (0 based) data registers or address registers
+            CMP.B     #7, D2                
+            BEQ       NO_MORE_BITS
+
+            * shift left to detect carry. If 1 is carried out, that means there is a register there
+            ASL.W     #1, D1
+            BCS       CHECK_BIT
+            ADD.B     #1, D2
+        
+            BRA       FIND_HIGH_TO_LOW_BITS
+
+CHECK_BIT:
+            * has a low bit register value not been stored yet?
+            CMP.B     #-1, D6
+            BEQ       STORE_LOW_BIT
+            BRA       STORE_HIGH_BIT
+
+STORE_HIGH_BIT:
+            ADD.B     #1, D2
+            MOVE.B    D2, D7
+            BRA       FIND_HIGH_TO_LOW_BITS
+
+STORE_LOW_BIT:
+            ADD.B     #1, D2
+            MOVE.B    D2, D6
+            BRA       FIND_HIGH_TO_LOW_BITS
+
+NO_MORE_BITS:
+            RTS
+*-----------------------------------------------------------
+
+
+
+
+*-----------------------------------------------------------
+DECODE_POSTINC:
+            * bring in the next word from memory, which represents the register list mask
+            MOVE.W    (A2)+, D1
+            CLR.L     D3
+            BSR       DECODE_LIST_MASK_POST
+
+DECODE_LIST_MASK_POST:
+            BSR       CLR_CHECK_REGS
+            BSR       FIND_LOW_TO_HIGH_BITS
+            BSR       DATA_REG_LIST
+
+            BSR       CLR_CHECK_REGS
+            BSR       FIND_LOW_TO_HIGH_BITS
+            BSR       ADDR_REG_LIST
+            RTS
+
+FIND_LOW_TO_HIGH_BITS:
+            * only parse 8 (0 based) data registers or address registers
+            CMP.B     #7, D2                
+            BEQ       NO_MORE_BITS
+
+            * shift left to detect carry. If 1 is carried out, that means there is a register there
+            ASR.W     #1, D1
+            BCS       CHECK_BIT_POST
+            ADD.B     #1, D2
+            
+            BRA       FIND_LOW_TO_HIGH_BITS
+
+CHECK_BIT_POST:
+            * has a low bit register value not been stored yet?
+            CMP.B     #-1, D6
+            BEQ       STORE_LOW_BIT_POST
+            BRA       STORE_HIGH_BIT_POST
+
+STORE_LOW_BIT_POST:
+            ADD.B     #1, D2
+            MOVE.B    D2, D6
+            BRA       FIND_LOW_TO_HIGH_BITS
+
+STORE_HIGH_BIT_POST:
+            ADD.B     #1, D2
+            MOVE.B    D2, D7
+            BRA       FIND_LOW_TO_HIGH_BITS
 *-----------------------------------------------------------
 
 
