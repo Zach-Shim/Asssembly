@@ -10,7 +10,7 @@ Lucas:   Bcc
 
 ## Updates:
 <p>
-MOVEM is done and should be working. Still need to implement MOVEQ   
+MOVEM and MOVEQ are done and should be working.
 </p>
 
 ## Known Issues: 
@@ -39,11 +39,11 @@ Current Supported Opcodes
   <li> JSR </li>  
   <li> MOVE </li>
   <li> MOVEM </li>
+  <li> MOVEQ </li>
 </ul>
 
 Opcdoes that will be supported in the future:
 <ul>
-  <li> MOVEQ
   <li> LSL, LSR, ASL, ASR
   <li> Bcc (BLT, BGE, BEQ) 
  </ul>
