@@ -687,6 +687,9 @@ FIND_OPCODE:
 
             CMP.B   #%1101, opTag
             BEQ     OPC_1101
+            
+            CMP.B   #%1110, opTag
+            BEQ     OPC_1110
 
             * error, bad opcode
             BRA      BAD_OPCODE
@@ -1225,15 +1228,134 @@ OPC_1101:
             BRA     PROCESS_ROEA        * subroutine processes everything for ADD
 
 *-----------------------------------------------------------
+            
+*---------------------------opc_1110------------------------
+* First four bits = 1110
+* (LSL, LSR, ASL, ASR)
+*-----------------------------------------------------------
+OPC_1110:
+            MOVE.B  #%00111110, valid ; valid bits are the same for all shifts
+            
+            ; check for LSL/LSR vs ASL/ASR
+            GET_BITS #4,#3
+            CMP.B   #0,D4
+            BEQ     A_SHIFT     ; if bits 4-3 are 00, ASL/ASR
+            BRA     L_SHIFT     ; if bits 4-3 are 01, LSL/LSR
+
+;======================================================
+; getting the opcode name
+A_SHIFT:
+            MOVE.B  #'A',(A1)+
+            MOVE.B  #'S',(A1)+ 
+            GET_BITS #8,#8      ; check for shifting left or right
+            CMP.B   #01,D4
+            BEQ     L_TO_BUFF
+            BRA     R_TO_BUFF
+            
+L_SHIFT:
+            MOVE.B  #'L',(A1)+
+            MOVE.B  #'S',(A1)+
+            GET_BITS #8,#8      ; check for shifting left or right
+            CMP.B   #01,D4
+            BEQ     L_TO_BUFF
+            BRA     R_TO_BUFF
+            
+            
+L_TO_BUFF:
+            MOVE.B  #'L',(A1)+
+            MOVE.B  #'.',(A1)+
+            
+            BRA     SHIFT_MODES
 
 
+R_TO_BUFF:
+            MOVE.B  #'R',(A1)+
+            MOVE.B  #'.',(A1)+
+
+            BRA     SHIFT_MODES
 
 
+;======================================================
+; determining which mode to use
+SHIFT_MODES:
+            GET_BITS #7,#6
+            CMP.B   #3,D4
+            BNE     SHIFT_REG_OR_IMM    ; jump to register/immediate mode if the bits aren't #%11
+            BRA     SHIFT_MEM_MODE      ; otherwise, jump to memory mode if the bits are #%11
 
 
+SHIFT_REG_OR_IMM: ; register and immediate shifts
+            
+            ; get the size
+            SIZE_TO_BUFFER D4
+            
+            
+            ; get the i/r bit to determine immediate/register
+            GET_BITS #5,#5
+            ; if i/r is 0, it's an immediate shift
+            ; if i/r is 1, it's a register shift
+            CMP.B   #0,D4
+            BEQ     SHIFT_IMMEDIATE_MODE
+            BRA     SHIFT_REGISTER_MODE
+            
 
+;======================================================
+; shifting modes (immediate data, from a register, from memory)
+SHIFT_IMMEDIATE_MODE:
+            MOVE.B  #'#',(A1)+
+            
+            JSR     SHIFT_COUNT
+            
+            MOVE.B  #',',(A1)+
+            MOVE.B  #' ',(A1)+
+            
+            BRA     SHIFT_DEST_REG   ; get the destination register
 
+SHIFT_COUNT: ; moves the size to the buffer
+            GET_BITS #11,#9
+            
+            CMP.B   #0,D4   ; shift bits = 0, shifting 8 bits
+            BEQ     EIGHT_TO_BUFF
+            
+            ADD.B   #$30,D4
+            MOVE.B  D4,(A1)+
+            RTS
+            
+EIGHT_TO_BUFF:
+            MOVE.B  #'8',(A1)+
+            RTS
+            
+            
+SHIFT_REGISTER_MODE:
+            MOVE.B  #'D',(A1)+
+            
+            GET_BITS #7, #6
+            
+            ADD.B   #$30,D4         ; push the register to the buffer
+            MOVE.B  D4,(A1)+
+            MOVE.B  #',',(A1)+
+            MOVE.B  #' ',(A1)+
+            
+            BRA     SHIFT_DEST_REG   ; get the destination register
 
+SHIFT_DEST_REG:
+            MOVE.B  #'D',(A1)+
+            GET_BITS #2,#0
+            ; add 30 to the register bits
+            ADD.B   #$30,D4
+            MOVE.B  D4,(A1)+
+            
+            MOVE.B  #0,(A1)+        ; add the null terminator
+            
+            BRA     IDENTIFY_OPCODE
+            
+            
+SHIFT_MEM_MODE: ; memory shifts
+            MOVE.B  #'W',(A1)+      ; always word sized
+            MOVE.B  #' ',(A1)+
+            
+            DECODE_EA #5, #0
+            BRA     IDENTIFY_OPCODE
 
 
 *--------------Process Register->Opmode->EA-----------------
@@ -1846,6 +1968,7 @@ DONE:
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
+
 
 
 
