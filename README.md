@@ -4,6 +4,7 @@
 <p>
 Zach:    N/A  
 Brendan: Print DATA for invalid words
+
 Lucas:   Writing to File   
 </p>
 ## Updates:
