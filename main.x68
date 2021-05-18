@@ -14,30 +14,29 @@
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
 LF          EQU     $0A 
 
-rule1:      DC.B    '1. Addresses must be in the range $FFFFFF > x > $6FFF', CR, LF, 0 ' 
-rule1c:     DC.B    'where x is your given address.', CR, LF, 0 '
-rule2:      DC.B    '2. If you use any letters (A-F), make sure they are upper case.', CR, LF, 0
-rule3:      DC.B    '3. If you use constants (DC), make sure you give addresses that', CR, LF, 0 
-rule3c:     DC.B    'do not include that part of memory (only want to parse instructions).', CR, LF, 0
-startMsg:   DC.B    'Please enter a starting address.  ', CR, LF, 0
+rule1:      DC.B    '1. Addresses must be in the range $FFFFFF > x > $6FFF where x is a user given address.', CR, LF, 0
+rule2:      DC.B    '2. If you use hex letters (A-F), make sure they are upper case. Lower case hex letters will throw an error', CR, LF, 0
+rule3:      DC.B    '3. If you use constants (DC), make sure you give addresses that do not include that part of memory (only want to parse instructions).', CR, LF, 0
+startMsg:   DC.B    'Please enter a starting address. ', CR, LF, 0
 endMsg:     DC.B    'Please enter an ending address. ', CR, LF, 0
 doneMsg:    DC.B    'exiting...', CR, LF, 0
 badInput:   DC.B    'Invalid Input', CR, LF, 0
 newline:    DC.B    '', CR, LF, 0
 
 userAddr:   DS.L    1
-            DC.L    0 *Null termination for userAddr
+            DC.L    0               * Null termination for userAddr
 startAddr:  DS.L    1
 endAddr:    DS.L    1
 
 opcode:     DS.W    1   
-opTag:      DS.B    1               ; a four bit identifier for opcodes (first four bits of an instruction, ex. 1011 = ADD)
+opTag:      DS.B    1               * a four bit identifier for opcodes (first four bits of an instruction, ex. 1011 = ADD)
 opSize:     DS.B    1
 valid:      DS.B    1
 
 ea_mode     DS.B    1
 ea_register DS.B    1
 ea_valid    DS.B    1
+list_mask   DS.W    1
 
 
 
@@ -251,12 +250,9 @@ INSERT_DOLLAR:  MACRO
 *-------------------------MAIN------------------------------
 MAIN:
             PRINT_MSG    rule1
-            PRINT_MSG    rule1c                   
             PRINT_MSG    rule2
             PRINT_MSG    rule3
-            PRINT_MSG    rule3c
             BSR          GET_INPUT
-            BSR          CHECK_ADDRESS
             BRA          LOAD_ADDRESSES
 *-----------------------------------------------------------
 
@@ -949,7 +945,6 @@ OPC_MOVEM:
             MOVE.B  #'E',(A1)+      
             MOVE.B  #'M',(A1)+ 
             INSERT_PERIOD
-            INSERT_SPACE
 
             JSR     DECODE_MOVEM
             BRA     IDENTIFY_OPCODE
@@ -973,10 +968,6 @@ OPC_DIVU:
             INSERT_SPACE
 
             MOVE.B  #1, opSize
-            
-            * set the valid bits (since there's only one adressing mode)
-            MOVE.B  #%10111111, valid
-            
             JMP     EA_TO_D
 
 *-----------------------------------------------------------
@@ -1307,17 +1298,18 @@ GET_DATA_REG_NUM:
 *   D3 = determines if we are currrently parsing data regs or address regs
 *   D4 = holds returned value from GET_BITS
 *   D5 = holds dr field (direction of transfer)
-*   D6 = holds low bit for register list 
-*   D7 = holds high bit for register list 
+*   D7 = temp data
 *-----------------------------------------------------------
 DECODE_MOVEM:
             CLR_D_REGS
 
-            BSR             MOVEM_SIZE
-            MOVE.B          D4, opSize
-            SIZE_TO_BUFFER  D4
+            BSR       MOVEM_SIZE
+            BSR       MOVEM_BR
 
-            BSR             MOVEM_BR
+            CMP.B     #0, D5            * register -> memory
+            BEQ       REG_TO_MEM
+            CMP.B     #1, D5            * memory -> register
+            BEQ       MEM_TO_REG
 
 *-----------------------------------------------------------
 MOVEM_SIZE:
@@ -1339,190 +1331,122 @@ MOVEM_PUSH_LONG:
             BRA       MOVEM_SIZE_DONE
 
 MOVEM_SIZE_DONE:
+            MOVE.B          D4, opSize
+            SIZE_TO_BUFFER  D4
+            INSERT_SPACE
             RTS
 *-----------------------------------------------------------
 MOVEM_BR:
             * move dr of operation to D5
             GET_BITS  #10, #10
             MOVE.B    D4, D5
-
-            CMP.B     #0, D5            * register -> memory
-            BEQ       REG_TO_MEM
-            CMP.B     #1, D5            * memory -> register
-            BEQ       MEM_TO_REG
+            RTS
 *-----------------------------------------------------------
 REG_TO_MEM:
-            BSR       DECODE_PREDEC
+            BSR       REGS_TO_MEM
             CLR_D_REGS
+            INSERT_COMMA
+            INSERT_SPACE
             DECODE_EA #5, #0
             BRA       DONE_MOVEM
 
 MEM_TO_REG:
             DECODE_EA #5, #0
             CLR_D_REGS
-            BSR       DECODE_POSTINC
+            INSERT_COMMA
+            INSERT_SPACE
+            BSR       REGS_TO_MEM
             BRA       DONE_MOVEM
 
 DONE_MOVEM:
             RTS
 *-----------------------------------------------------------
-DECODE_PREDEC:
+REGS_TO_MEM:
             * bring in the next word from memory, which represents the register list mask
-            MOVE.W    (A2)+, D1
-            
-            MOVE.L    #0, D3
-            BSR       CLR_CHECK_REGS
-            BSR       DECODE_LIST_MASK_PRE
+            MOVE.W    (A2)+, list_mask
 
+            * load registers with appropriate memory
+            BSR       LOAD_REGISTERS
+            MOVE.L    #0, D3
+            BSR       FIND_HIGH_TO_LOW_BITS   
+
+            * find address registers   
+            BSR       LOAD_REGISTERS
             MOVE.L    #1, D3
-            BSR       CLR_CHECK_REGS
-            BSR       DECODE_LIST_MASK_PRE
-            RTS
-            
-CLR_CHECK_REGS:
-            * fill with error checking values
-            MOVE.L    #-1, D2
-            MOVE.L    #-1, D6
-            MOVE.L    #-1, D7
-            RTS
-*-----------------------------------------------------------
-DECODE_LIST_MASK_PRE:
             BSR       FIND_HIGH_TO_LOW_BITS
 
-            CMP.B     #0, D3
-            BEQ       DATA_REG_LIST
-
-            CMP.B     #1, D3
-            BEQ       ADDR_REG_LIST
-
-DATA_REG_LIST:
-            CMP.B     #-1, D6
-            BEQ       NO_MORE_REGS
-            BSR       PUSH_LOW_DATA_BIT
-
-            CMP.B     #-1, D7
-            BEQ       NO_MORE_REGS
-            BSR       PUSH_HIGH_DATA_BIT
-
-            BRA       NO_MORE_REGS
-
-PUSH_LOW_DATA_BIT:
-            MOVE.B    #'D',(A1)+              * add "D" to buffer
-            ADD.B     #$30, D6                * convert data register # to ASCII digit
-            MOVE.B    D6, (A1)+               * register # to buffer
+            BSR       REMOVE_FINAL_SLASH 
             RTS
 
-PUSH_HIGH_DATA_BIT:
-            MOVE.B    #'-',(A1)+              * add "D" to buffer
-            MOVE.B    #'D',(A1)+              * add "D" to buffer
-            ADD.B     #$30, D7                * convert data register # to ASCII digit
-            MOVE.B    D7, (A1)+               * register # to buffer
+LOAD_REGISTERS:
+            BSR       MOVEM_BR
+            MOVE.B    #-1, D2
+            MOVE.W    list_mask, D1
             RTS
 
-ADDR_REG_LIST:
-            CMP.B     #-1, D6
-            BEQ       NO_MORE_REGS
-            BSR       PUSH_LOW_ADDR_BIT
+REMOVE_FINAL_SLASH:
+            MOVE.B    #0, -(A1)
+            RTS 
 
-            CMP.B     #-1, D7
-            BEQ       NO_MORE_REGS
-            BSR       PUSH_HIGH_ADDR_BIT
-
-            BRA       NO_MORE_REGS
-
-PUSH_LOW_ADDR_BIT:
-            MOVE.B    #'/',(A1)+              
-            MOVE.B    #'A',(A1)+              
-            ADD.B     #$30, D6                * convert data register # to ASCII digit
-            MOVE.B    D6, (A1)+               
-            RTS
-
-PUSH_HIGH_ADDR_BIT:
-            MOVE.B    #'-',(A1)+              
-            MOVE.B    #'A',(A1)+              
-            ADD.B     #$30, D7                * convert data register # to ASCII digit
-            MOVE.B    D7, (A1)+               
-            RTS
-
-NO_MORE_REGS:
-            RTS
 *-----------------------------------------------------------  
 FIND_HIGH_TO_LOW_BITS:
+            * only parse 8 (0 based) data registers or address registers at a time
+            ADD.B     #1, D2            
+            CMP.B     #7, D2  
+            BGT       NO_MORE_BITS
+
+            * are this register -> memory?
+            CMP.B     #0, D5 
+            BEQ       SHIFT_LIST_LEFT
+
+            * are this memory -> register?
+            CMP.B     #1, D5 
+            BEQ       SHIFT_LIST_RIGHT        
+            BRA       FIND_HIGH_TO_LOW_BITS
+
+SHIFT_LIST_LEFT:
             * shift left to detect carry. If 1 is carried out, that means there is a register there
             ASL.W     #1, D1
-            BCS       CHECK_BIT
-            ADD.B     #1, D2
-            
-            CMP.B     #7, D2                * only parse 8 (0 based) data registers or address registers
-            BEQ       NO_MORE_BITS
+            BCS       STORE_BIT    
             BRA       FIND_HIGH_TO_LOW_BITS
 
-CHECK_BIT:
-            * has a low bit register value not been stored yet?
-            CMP       #-1, D6
-            BEQ       STORE_LOW_BIT
-            BRA       STORE_HIGH_BIT
+SHIFT_LIST_RIGHT:
+            * shift left to detect carry. If 1 is carried out, that means there is a register there
+            ASR.W     #1, D1
+            BCS       STORE_BIT         
+            BRA       FIND_HIGH_TO_LOW_BITS
 
-STORE_HIGH_BIT:
+STORE_BIT:
+            * are we dealing with data registers?
+            CMP.B     #0, D3
+            BEQ       STORE_DATA_REG_BIT
+
+            * are we dealing with address registers?
+            CMP.B     #1, D3
+            BEQ       STORE_ADDR_REG_BIT
+
+STORE_DATA_REG_BIT:
+            MOVE.B    #'D', (A1)+
+            BRA       LOOP_BACK
+
+STORE_ADDR_REG_BIT:
+            MOVE.B    #'A', (A1)+
+            BRA       LOOP_BACK
+
+LOOP_BACK:
+            * push register number to buffer
             MOVE.B    D2, D7
-            BRA       FIND_HIGH_TO_LOW_BITS
-
-STORE_LOW_BIT:
-            MOVE.B    D2, D6
+            ADD.B     #$30, D7
+            MOVE.B    D7, (A1)+
+            MOVE.B    #'/', (A1)+       
             BRA       FIND_HIGH_TO_LOW_BITS
 
 NO_MORE_BITS:
+            MOVE.W    D1, list_mask
             RTS
 *-----------------------------------------------------------
 
 
-DECODE_POSTINC:
-            * bring in the next word from memory, which represents the register list mask
-            MOVE.W    (A2)+, D1
-            
-            MOVE.L    #0, D3
-            BSR       CLR_CHECK_REGS
-            BSR       DECODE_LIST_MASK_POST
-
-            MOVE.L    #1, D3
-            BSR       CLR_CHECK_REGS
-            BSR       DECODE_LIST_MASK_POST
-
-DECODE_LIST_MASK_POST:
-            BSR       FIND_LOW_TO_HIGH_BITS
-
-            CMP.B     #0, D3
-            BEQ       ADDR_REG_LIST 
-
-            CMP.B     #1, D3
-            BEQ       DATA_REG_LIST
-
-FIND_LOW_TO_HIGH_BITS:
-            * shift left to detect carry. If 1 is carried out, that means there is a register there
-            ASR.W     #1, D1
-            BCS       CHECK_BIT_POST
-            ADD.B     #1, D2
-            
-            CMP.B     #7, D2            # only parse 8 (0 based) data registers or address registers
-            BEQ       NO_MORE_BITS_POST
-            BRA       FIND_LOW_TO_HIGH_BITS
-
-CHECK_BIT_POST:
-            * has a low bit register value not been stored yet?
-            CMP       #-1, D6
-            BEQ       STORE_LOW_BIT_POST
-            BRA       STORE_HIGH_BIT_POST
-
-STORE_LOW_BIT_POST:
-            MOVE.B    D2, D6
-            BRA       FIND_LOW_TO_HIGH_BITS
-
-STORE_HIGH_BIT_POST:
-            MOVE.B    D2, D7
-            BRA       FIND_LOW_TO_HIGH_BITS
-
-NO_MORE_BITS_POST:
-            RTS
 
 
 
@@ -1625,31 +1549,15 @@ EA_110:
 
 *----------------------------Absolute or immediate address------------------------
 EA_111:
-            * D405      0 0003456  23345245
-            * ADD.L     $1234, D0
 
-            * 8 bit value
-            * 11111111
+            CMP.B       #%000, ea_register                  * compare to determine if it's a word
+            BEQ         EA_WORD                             * put word address in buffer
 
-            * 11111011 - Direct data register would be Invalid
-            * 00000100
-            * 00000000 -> invalid code
-
-            * and.b     #$F, Dn        ---->  10000000
-            * cmp.b     #%10000000, Dn  
-
-            * check against valid bits
-                * if invalid, branch to invalid opcode subroutine
-                    * if the mode is 111, then go back and print out addresses
-
-            CMP.B       #%000, ea_register                * compare to determine if it's a word
-            BEQ         EA_WORD                  * put word address in buffer
-
-            CMP.B       #%001, ea_register                * compare to determine if it's a long
-            BEQ         EA_LONG                  * put long address in buffer
+            CMP.B       #%001, ea_register                  * compare to determine if it's a long
+            BEQ         EA_LONG                             * put long address in buffer
             
             CMP.B       #%100, ea_register
-            BEQ         EA_IMMEDIATE             * always print a long if it's immediate data
+            BEQ         EA_IMMEDIATE                        * always print a long if it's immediate data
 
             * Invalid EA mode/register
             BRA         INVALID_EA
