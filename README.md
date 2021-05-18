@@ -1,12 +1,9 @@
 # Disassembler or DASM FOR SHORT
 
 ## TODO List for this week:
-TBD
-
-## Current Opcode You Are Working On:
 Zach:    N/A  
-Brendan: MULS   
-Lucas:   Bcc   
+Brendan: Print DATA for invalid words
+Lucas:   Writing to File   
 
 ## Updates:
 <p>
@@ -40,11 +37,11 @@ Current Supported Opcodes
   <li> MOVE </li>
   <li> MOVEM </li>
   <li> MOVEQ </li>
+  <li> Bcc (BLT, BGE, BEQ) 
 </ul>
 
 Opcdoes that will be supported in the future:
 <ul>
-  <li> LSL, LSR, ASL, ASR
-  <li> Bcc (BLT, BGE, BEQ) 
+  <li> LSL, LSR, ASL, ASR 
  </ul>
 </p>
