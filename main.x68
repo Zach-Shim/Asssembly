@@ -14,7 +14,7 @@
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
 LF          EQU     $0A 
 
-rule1:      DC.B    '1. Addresses must be in the range $FFFFFF > x > $6FFF where x is a user given address.', CR, LF, 0
+rule1:      DC.B    '1. Addresses must be in the range $FFFFFF > x > $100 where x is a user given address.', CR, LF, 0
 rule2:      DC.B    '2. If you use hex letters (A-F), make sure they are upper case. Lower case hex letters will throw an error', CR, LF, 0
 rule3:      DC.B    '3. If you use constants (DC), make sure you give addresses that do not include that part of memory (only want to parse instructions).', CR, LF, 0
 startMsg:   DC.B    'Please enter a starting address. ', CR, LF, 0
@@ -375,11 +375,11 @@ CHECK_ADDRESS:
             CMP.L      endAddr, D5          ; starting address >= ending address?
             BGE        INVALID_ADDRESS
 
-            CMP.L      #$6FFF, D5
-            BLE        INVALID_INPUT 
+            CMP.L      #$100, D5
+            BLT        INVALID_INPUT 
             
             CMP.L      #$FFFFFF, endAddr
-            BGE        INVALID_INPUT
+            BGT        INVALID_INPUT
             RTS
 
 INVALID_ADDRESS:  
@@ -594,8 +594,6 @@ IDENTIFY_OPCODE:
             * print next address
             BSR     PRINT_ADDRESS
             INSERT_SPACE
-            
-            ;BSR     RESTORE_REGS           need to fix
 
             CLR_D_REGS
             BSR     GRAB_NEXT_WORD          * grab opcode
@@ -603,15 +601,6 @@ IDENTIFY_OPCODE:
            
             BRA     FIND_OPCODE
 *------------------------------------------------------------
-
-*----------------------RESTORE_REGS--------------------------
-* Description:
-* Move the old registers onto the stack
-*------------------------------------------------------------
-RESTORE_REGS:
-            MOVEM.L (SP)+, D0-D7            
-            RTS
-*-----------------------------------------------------------
 
 *---------Useful Subroutines For Identifying Opcodes--------
 GRAB_NEXT_WORD:
@@ -621,11 +610,8 @@ GRAB_NEXT_WORD:
 
 GRAB_FIRST_FOUR_BITS:
             * find first four bits of opcode
-            MOVE.W  opcode, D2
-            MOVE.B  #12, D1
-            LSR.L   D1, D2
-            MOVE.B  D2, D0
-            MOVE.B  D0, opTag
+            GET_BITS  #15, #12
+            MOVE.B    D4, opTag
             RTS
 *-----------------------------------------------------------
 
@@ -671,6 +657,9 @@ FIND_OPCODE:
 
             CMP.B   #%0101, opTag 
             BEQ     OPC_0101
+            
+            CMP.B   #%0111, opTag 
+            BEQ     OPC_0111
 
             CMP.B   #%1000, opTag
             BEQ     OPC_1000
@@ -701,6 +690,10 @@ BAD_OPCODE:
 OPC_0000:
             GET_BITS  #11, #8
             
+            * is the opcode ANDI?
+            CMP.B     #%0010, D4
+            BEQ       OPC_ANDI
+
             * is the opcode ADDI?
             CMP.B     #%0110, D4
             BEQ       OPC_ADDI
@@ -709,7 +702,18 @@ OPC_0000:
             CMP.B     #%0100, D4
             BEQ       OPC_SUBI
 
+
             JMP       BAD_OPCODE
+
+*------------------------OPC_ANDI---------------------------
+OPC_ANDI:
+            MOVE.B  #'A',(A1)+          * Put AND into Buff
+            MOVE.B  #'N',(A1)+
+            MOVE.B  #'D',(A1)+
+            MOVE.B  #'I',(A1)+
+            INSERT_PERIOD
+
+            BSR     DECODE_IMMEDIATE
 
 *------------------------OPC_ADDI---------------------------
 OPC_ADDI:
@@ -951,8 +955,35 @@ OPC_MOVEM:
 
 *------------------------------------------------------------------
 
+*---------------------------OPC_0111------------------------
+* First four bits = 0111
+* (MOVEQ)
+*-----------------------------------------------------------
+OPC_0111:
+            MOVE.B  #'M',(A1)+      
+            MOVE.B  #'O',(A1)+ 
+            MOVE.B  #'V',(A1)+
+            MOVE.B  #'E',(A1)+      
+            MOVE.B  #'Q',(A1)+ 
+            INSERT_PERIOD
+            MOVE.B  #'B',(A1)+
+            INSERT_SPACE
+
+            * push immediate byte value to buffer
+            GET_BITS        #7, #0
+            VALUE_TO_BUFFER D4 
+
+            INSERT_COMMA
+            INSERT_SPACE
+
+            * push register to buffer
+            MOVE.B          #'D',(A1)+
+            GET_BITS        #11, #9 
+            VALUE_TO_BUFFER D4
+*-----------------------------------------------------------
+
 *---------------------------OPC_1000------------------------
-* First four bits = 1001
+ * First four bits = 1000
 * (DIVU)
 *-----------------------------------------------------------
 OPC_1000:   * keeping this in case there's more that start with 1000
