@@ -2,7 +2,8 @@
 
 ## TODO List for this week:
 <p>
-Zach:    N/A  
+Zach:    N/A 
+  
 Brendan: Print DATA for invalid words
 
 Lucas:   Writing to File   
