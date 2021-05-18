@@ -1,10 +1,11 @@
 # Disassembler or DASM FOR SHORT
 
 ## TODO List for this week:
+<p>
 Zach:    N/A  
 Brendan: Print DATA for invalid words
 Lucas:   Writing to File   
-
+</p>
 ## Updates:
 <p>
 MOVEM and MOVEQ are done and should be working.
