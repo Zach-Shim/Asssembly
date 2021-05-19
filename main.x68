@@ -14,14 +14,20 @@
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
 LF          EQU     $0A 
 
-rule1:      DC.B    '1. Addresses must be in the range $FFFFFF > x > $100 where x is a user given address.', CR, LF, 0
-rule2:      DC.B    '2. If you use hex letters (A-F), make sure they are upper case. Lower case hex letters will throw an error', CR, LF, 0
-rule3:      DC.B    '3. If you use constants (DC), make sure you give addresses that do not include that part of memory (only want to parse instructions).', CR, LF, 0
+rule1:      DC.B    '1. Addresses must be in the range $FFFFFF > x > $6FFF', CR, LF, 0 ' 
+rule1c:     DC.B    'where x is your given address.', CR, LF, 0 '
+rule2:      DC.B    '2. If you use any letters (A-F), make sure they are upper case.', CR, LF, 0
+rule3:      DC.B    '3. If you use constants (DC), make sure you give addresses that', CR, LF, 0 
+rule3c:     DC.B    'do not include that part of memory (only want to parse instructions).', CR, LF, 0
 startMsg:   DC.B    'Please enter a starting address. ', CR, LF, 0
 endMsg:     DC.B    'Please enter an ending address. ', CR, LF, 0
-doneMsg:    DC.B    'exiting...', CR, LF, 0
+doneMsg:    DC.B    'Disassembly complete, saved to file "dasmOutput.txt."', CR, LF, 0
 badInput:   DC.B    'Invalid Input', CR, LF, 0
 newline:    DC.B    '', CR, LF, 0
+fileName    DC.B     'dasmOutput.txt',0
+
+printAddrEnd     DS.L    0
+printAddrStart   DS.L    0
 
 userAddr:   DS.L    1
             DC.L    0               * Null termination for userAddr
@@ -246,12 +252,23 @@ INSERT_DOLLAR:  MACRO
 * Description:  
 * Main routine
 *-----------------------------------------------------------
-
+            
 *-------------------------MAIN------------------------------
 MAIN:
+            MOVE.B #50,D0 *Use this at the start of any program with file handling
+            TRAP   #15
+            
+            LEA    fileName, A1 *Load the name of the file
+            MOVE.B #52, D0 *Create file or overwrite existing
+            TRAP   #15
+            
+            CLR.L  D0
+            
             PRINT_MSG    rule1
+            PRINT_MSG    rule1c
             PRINT_MSG    rule2
             PRINT_MSG    rule3
+            PRINT_MSG    rule3c
             BSR          GET_INPUT
             BRA          LOAD_ADDRESSES
 *-----------------------------------------------------------
@@ -457,13 +474,21 @@ STORE_INPUT:
 
 *----------------------PRINT_ADDRESS------------------------
 PRINT_ADDRESS:
+
+            *Copy end adress to data register, used for calculating # of bytes to write to file
+            *MOVE.L  A1,printAddrEnd
+            *MOVE.L  A1,d1 
+
             * reset A1 to beginning of string
-            CLR_D_REGS
             CLR_A_REG D0, A1
+            
+            *Copy start address
+            *MOVE.L  A1,printAddrStart 
+            *MOVE.L  A1,d2 
             
             * move current address to D2
             MOVE.L    A2, D2
-
+           
             * if absolute short, print word. Range $0000 - $7FFF and $FFFF8000 - $FFFFFFFF
             MOVE.L    #$8000, D1
             CMP.L     D1, D2
@@ -475,13 +500,11 @@ PRINT_ADDRESS:
             BGE       PRINT_LONG                 
 
 PRINT_WORD:
-            CLR_D_REGS
             MOVE.B    #1, D1            * passing 1 means we are passing word as a parameter to HEX_TO_ASCII
             MOVE.W    A2, D7            * passing current parsing position means we are passing an address as a parameter in D7 to HEX_TO_ASCII
             BRA       FINISH_PRINT
 
 PRINT_LONG:
-            CLR_D_REGS
             MOVE.B    #3, D1            * passing 1 means we are passing long as a parameter to HEX_TO_ASCII
             MOVE.L    A2, D7
             BRA       FINISH_PRINT
@@ -492,17 +515,34 @@ FINISH_PRINT:
             
             * print out string
             MOVE.B    #00,(A1)
-            CLR_D_REGS
             CLR_A_REG D0, A1
             MOVE.B    #14, D0
             TRAP      #15
+            
+            CLR.L     D2                    
+            BRA       FIND_NUM_OF_CHARS
+            
+            RTS
+
+FIND_NUM_OF_CHARS:
+            MOVE.B    (A1),D5
+            CMP.B     #00, D5
+            BEQ       FIND_NUMS_DONE
+            ADD.B     #1, D2
+            MOVE.B    (A1)+, D5
+            BRA       FIND_NUM_OF_CHARS
+
+FIND_NUMS_DONE:
+            CLR_A_REG D0, A1
+            MOVE.B #54,D0 *Write to file
+            TRAP   #15
             RTS
 *-----------------------------------------------------------
 
 *-------------------PRINT_INSTRUCTION-----------------------
-PRINT_INSTRUCTION:    
-            * null terminator
-            MOVE.B    #00,(A1)              
+PRINT_INSTRUCTION:            
+            MOVE.L    A1,D2 *Load end address into d2, this will be used to later calculated # of bytes to write to file 
+            MOVE.B    #00,(A1) * null terminator             
 
             * reset A1 to beginning of string
             CLR.L     D0
@@ -511,6 +551,17 @@ PRINT_INSTRUCTION:
             * print out string
             MOVE.B    #14, D0
             TRAP      #15
+            
+            *Print to File
+            SUB.L   A1,D2 *Subtract start address from end address to determine number of bytes to read
+            MOVE.B  #54,D0 *Trap task to write to file
+            TRAP    #15
+            
+            LEA newline,A1 *Create new line on file
+            
+            MOVE.L #1,D2
+            MOVE.B #54,D0 *Trap task to write to file
+            TRAP   #15
 
             PRINT_MSG newline
             RTS
@@ -1887,13 +1938,14 @@ DONE:
             CLR_A_REG D0, A1
 
             * add 'SIMHAULT' to buffer
+            MOVE.B  #' ',(A1)+ 
             MOVE.B  #'S',(A1)+      
             MOVE.B  #'I',(A1)+         
             MOVE.B  #'M',(A1)+         
             MOVE.B  #'H',(A1)+        
             MOVE.B  #'A',(A1)+                 
             MOVE.B  #'L',(A1)+          
-            MOVE.B  #'T',(A1)+         
+            MOVE.B  #'T',(A1)+                 
             MOVE.B  #00,(A1)+         
 
             CLR_A_REG D0, A1
@@ -1902,11 +1954,22 @@ DONE:
             MOVE.B    #14, D0
             TRAP      #15
             
+            PRINT_MSG    newLine
+            PRINT_MSG    doneMsg
+            
             CLR_A_REG D0, A1
-
+            
+            *Write Pending data to file
+            MOVE.B #56,D0 
+            TRAP   #15
+            
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
+
+
+
+
 
 
 
