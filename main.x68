@@ -128,11 +128,19 @@ GET_BITS:   MACRO
 *   \1 = should hold value (in hex) you want to push to the buffer
 *
 *-----------------------------------------------------------
-VALUE_TO_BUFFER:  MACRO
-                  MOVE.L  \1, D2  
-                  JSR     NUMBER_OR_LETTER
-                  ENDM
+VALUE_TO_BUFFER:   MACRO
+                   MOVE.L  \1, D2
+                   JSR     ISOLATE_LAST_FOUR_BITS
+                   ENDM
+
+WORD_ADDRESS_TO_BUFFER: MACRO
+                   MOVE.B  #1, D1
+                   MOVE.L  \1, D7
+                   JSR     HEX_TO_ASCII
+                   ENDM 
 *-----------------------------------------------------------
+
+
 
 *----------------------Size To Buffer-----------------------
 * Description:
@@ -1020,12 +1028,14 @@ OPC_0111:
             MOVE.B  #'E',(A1)+      
             MOVE.B  #'Q',(A1)+ 
             INSERT_PERIOD
-            MOVE.B  #'B',(A1)+
+            MOVE.B  #'L',(A1)+
             INSERT_SPACE
 
             * push immediate byte value to buffer
+            INSERT_POUND
+            INSERT_DOLLAR
             GET_BITS        #7, #0
-            VALUE_TO_BUFFER D4 
+            WORD_ADDRESS_TO_BUFFER D4 
 
             INSERT_COMMA
             INSERT_SPACE
@@ -1034,6 +1044,7 @@ OPC_0111:
             MOVE.B          #'D',(A1)+
             GET_BITS        #11, #9 
             VALUE_TO_BUFFER D4
+            BRA             IDENTIFY_OPCODE
 *-----------------------------------------------------------
 
 *---------------------------OPC_1000------------------------
@@ -1108,7 +1119,7 @@ DECODE_QUICK:
             CLR.L            D4
             GET_BITS         #11, #9
             INSERT_POUND
-            VALUE_TO_BUFFER  D4
+            WORD_ADDRESS_TO_BUFFER  D4
 
             INSERT_COMMA
             INSERT_SPACE
@@ -1501,18 +1512,19 @@ GET_DATA_REG_NUM:
 *   D2 = temp variable to hold iteration values in LOOP_LIST
 *   D3 = determines if we are currrently parsing data regs or address regs
 *   D4 = holds returned value from GET_BITS
-*   D5 = holds dr field (direction of transfer)
+*   D5 = holds type field (direction of transfer)
 *   D7 = temp data
 *-----------------------------------------------------------
 DECODE_MOVEM:
             CLR_D_REGS
-
             BSR       MOVEM_SIZE
-            BSR       MOVEM_BR
+            BRA       MOVEM_TYPE
 
-            CMP.B     #0, D5            * register -> memory
+MOVEM_TYPE:
+            BSR       MOVEM_BR
+            CMP.B     #0, D4            * register -> memory
             BEQ       REG_TO_MEM
-            CMP.B     #1, D5            * memory -> register
+            CMP.B     #1, D4            * memory -> register
             BEQ       MEM_TO_REG
 
 *-----------------------------------------------------------
@@ -1543,11 +1555,17 @@ MOVEM_SIZE_DONE:
 MOVEM_BR:
             * move dr of operation to D5
             GET_BITS  #10, #10
-            MOVE.B    D4, D5
+            RTS
+*-----------------------------------------------------------
+MOVEM_MODE:
+            * move dr of operation to D5
+            GET_BITS  #5, #3
             RTS
 *-----------------------------------------------------------
 REG_TO_MEM:
-            BSR       REGS_TO_MEM
+            * bring in the next word from memory, which represents the register list mask
+            MOVE.W    (A2)+, list_mask
+            BSR       IDENTIFY_REGS
             CLR_D_REGS
             INSERT_COMMA
             INSERT_SPACE
@@ -1555,35 +1573,51 @@ REG_TO_MEM:
             BRA       DONE_MOVEM
 
 MEM_TO_REG:
+            * bring in the next word from memory, which represents the register list mask
+            MOVE.W    (A2)+, list_mask
             DECODE_EA #5, #0
             CLR_D_REGS
             INSERT_COMMA
             INSERT_SPACE
-            BSR       REGS_TO_MEM
+            BSR       IDENTIFY_REGS
             BRA       DONE_MOVEM
 
 DONE_MOVEM:
             RTS
 *-----------------------------------------------------------
-REGS_TO_MEM:
-            * bring in the next word from memory, which represents the register list mask
-            MOVE.W    (A2)+, list_mask
-
+IDENTIFY_REGS:
             * load registers with appropriate memory
-            BSR       LOAD_REGISTERS
+            BSR       LOAD_CHECKS
             MOVE.L    #0, D3
             BSR       FIND_HIGH_TO_LOW_BITS   
 
             * find address registers   
-            BSR       LOAD_REGISTERS
+            BSR       LOAD_CHECKS
             MOVE.L    #1, D3
             BSR       FIND_HIGH_TO_LOW_BITS
 
             BSR       REMOVE_FINAL_SLASH 
             RTS
 
-LOAD_REGISTERS:
+LOAD_CHECKS:
+            * is this memory -> register?
             BSR       MOVEM_BR
+            CMP.B     #1, D4
+            BEQ       LOAD_DONE
+
+            * is this register -> address?
+            BSR       MOVEM_MODE
+            CMP.B     #%111, D4
+            BEQ       LOAD_DONE
+            CMP.B     #%010, D4
+            BEQ       LOAD_DONE
+            
+            * is this register -> memory?
+            MOVE.B    #0, D4
+            BRA       LOAD_DONE
+
+LOAD_DONE:
+            MOVE.B    D4, D5
             MOVE.B    #-1, D2
             MOVE.W    list_mask, D1
             RTS
@@ -1599,14 +1633,24 @@ FIND_HIGH_TO_LOW_BITS:
             CMP.B     #7, D2  
             BGT       NO_MORE_BITS
 
-            * are this register -> memory?
+            * is this memory -> register?
+            CMP.B     #1, D5 
+            BEQ       SHIFT_LIST_RIGHT        
+
+            * is this register -> (xxx).W/(xxx).L?
+            CMP.B     #%111, D5 
+            BEQ       SHIFT_LIST_RIGHT
+
+            * is this register -> (An)?
+            CMP.B     #%010, D5 
+            BEQ       SHIFT_LIST_RIGHT
+
+            * is this register -> memory?
             CMP.B     #0, D5 
             BEQ       SHIFT_LIST_LEFT
 
-            * are this memory -> register?
-            CMP.B     #1, D5 
-            BEQ       SHIFT_LIST_RIGHT        
             BRA       FIND_HIGH_TO_LOW_BITS
+
 
 SHIFT_LIST_LEFT:
             * shift left to detect carry. If 1 is carried out, that means there is a register there
@@ -1836,19 +1880,29 @@ HEX_TO_ASCII:
 
             * isolate first four bits
             MOVE.B   D6, D2
-            LSR.B    #4, D2 
-            BSR      NUMBER_OR_LETTER
+            BSR      ISOLATE_FIRST_FOUR_BITS
 
             * isolate second set of four bits
             MOVE.B   D6, D2
+            BSR      ISOLATE_LAST_FOUR_BITS
+
+            BRA      ITERATE_BITS
+
+ISOLATE_FIRST_FOUR_BITS:
+            LSR.B    #4, D2 
+            BSR      NUMBER_OR_LETTER
+            RTS
+
+ISOLATE_LAST_FOUR_BITS:
             LSL.B    #4, D2 
             LSR.B    #4, D2 
             BSR      NUMBER_OR_LETTER
+            RTS
 
+ITERATE_BITS:
             SUB.B    #1, D1             * iterate
             CMP.B    #0, D1             * done if equal
             BLT      ATH_DONE
-
             BRA      HEX_TO_ASCII
 
 NUMBER_OR_LETTER:
@@ -1954,6 +2008,9 @@ DONE:
             MOVE.B    #14, D0
             TRAP      #15
             
+            MOVE.B    #8, D2
+            MOVE.B    #54, D0
+            TRAP      #15
             PRINT_MSG    newLine
             PRINT_MSG    doneMsg
             
