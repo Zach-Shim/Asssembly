@@ -40,11 +40,13 @@ Current Supported Opcodes
   <li> MOVE </li>
   <li> MOVEM </li>
   <li> MOVEQ </li>
-  <li> Bcc (BLT, BGE, BEQ) 
+  <li> Bcc (BLT, BGE, BEQ) </li>
+  <li> LSL, LSR, ASL, ASR </li>
+  <li> LEA </li>
 </ul>
 
 Opcdoes that will be supported in the future:
 <ul>
-  <li> LSL, LSR, ASL, ASR 
+  <li> 
  </ul>
 </p>
