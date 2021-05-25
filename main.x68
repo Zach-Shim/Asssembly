@@ -152,11 +152,44 @@ WORD_ADDRESS_TO_BUFFER: MACRO
 *        to push to the buffer
 *
 *-----------------------------------------------------------
-SIZE_TO_BUFFER:   MACRO
-                  MOVE.L  \1, D3
-                  JSR     FIND_SIZE
-                  ENDM
+SIZE_TO_BUFFER: MACRO
+                MOVE.L  \1, D0
+                BSR     CHECK_SIZE
+                MOVE.L  \1, D3
+                JSR     FIND_SIZE
+                ENDM
+
+CHECK_SIZE:
+                CMP.B   #2, D0
+                BGT     BAD_OPCODE
+                CMP.B   #0, D0
+                BLT     BAD_OPCODE
+                RTS
 *-----------------------------------------------------------
+
+
+
+
+
+
+*----------------------CHECK_REGISTER----------------------
+* Description:
+* Checks that a register number is valid. 
+* Valid sizes are 0-7 in decimal
+*
+* Parameters:
+*   \1 = holds regsiter number. 
+*
+*-----------------------------------------------------------
+CHECK_REGISTER: MACRO  
+                MOVE.B  \1, D0
+                CMP.B   #7, D0
+                BGT     BAD_OPCODE
+                CMP     #0, D0
+                BLT     BAD_OPCODE
+                ENDM
+*-----------------------------------------------------------
+
 
 
 
@@ -529,8 +562,6 @@ FINISH_PRINT:
             
             CLR.L     D2                    
             BRA       FIND_NUM_OF_CHARS
-            
-            RTS
 
 FIND_NUM_OF_CHARS:
             MOVE.B    (A1),D5
@@ -735,6 +766,9 @@ FIND_OPCODE:
             CMP.B   #%1110, opTag
             BEQ     OPC_1110
 
+            CMP.B   #%1111, opTag
+            BEQ     OPC_1111
+
             * error, bad opcode
             BRA      BAD_OPCODE
 
@@ -742,7 +776,24 @@ FIND_OPCODE:
 
 *-----------------------BAD OPCODE--------------------------
 BAD_OPCODE:
-            JMP      DONE
+            CLR_D_REGS
+            CLR_A_REG  D0, A1
+
+            INSERT_SPACE
+            MOVE.B   #'B', (A1)+
+            MOVE.B   #'A', (A1)+
+            MOVE.B   #'D', (A1)+
+            INSERT_SPACE
+            MOVE.B   #'D', (A1)+
+            MOVE.B   #'A', (A1)+
+            MOVE.B   #'T', (A1)+
+            MOVE.B   #'A', (A1)+
+            INSERT_SPACE
+
+            MOVE.B    #1, D1                  * passing 1 means we are passing word as a parameter to HEX_TO_ASCII
+            MOVE.W    opcode, D7              * passing current parsing position means we are passing an address as a parameter in D7 to HEX_TO_ASCII
+            BSR       FINISH_PRINT
+            BRA       IDENTIFY_OPCODE
 *-----------------------------------------------------------
 
 *------------------------OPC_0000---------------------------
@@ -763,7 +814,6 @@ OPC_0000:
             * is the opcode SUBI?
             CMP.B     #%0100, D4
             BEQ       OPC_SUBI
-
 
             JMP       BAD_OPCODE
 
@@ -937,6 +987,8 @@ OPC_0100:
             CMP.B    #%001, D4              
             BEQ      OPC_MOVEM
 
+            JMP      BAD_OPCODE
+
 *---------------------------OPC_NOP--------------------------------
 
 OPC_NOP:
@@ -1031,6 +1083,11 @@ OPC_0111:
             MOVE.B  #'L',(A1)+
             INSERT_SPACE
 
+            * error checking
+            GET_BITS        #8, #8
+            CMP.B           #0, D4
+            BNE             BAD_OPCODE
+
             * push immediate byte value to buffer
             INSERT_POUND
             INSERT_DOLLAR
@@ -1043,6 +1100,7 @@ OPC_0111:
             * push register to buffer
             MOVE.B          #'D',(A1)+
             GET_BITS        #11, #9 
+            CHECK_REGISTER  D4
             VALUE_TO_BUFFER D4
             BRA             IDENTIFY_OPCODE
 *-----------------------------------------------------------
@@ -1067,8 +1125,6 @@ OPC_DIVU:
             JMP     EA_TO_D
 
 *-----------------------------------------------------------
-
-
 
 *-----------------------OPC_0101----------------------------
 * First four bits = 0101
@@ -1128,7 +1184,6 @@ DECODE_QUICK:
             DECODE_EA       #5, #0
             BRA             IDENTIFY_OPCODE
 *-----------------------------------------------------------
-
 
 *-----------------------OPC_0110----------------------------
 * First four bits = 0110
@@ -1264,7 +1319,7 @@ OPC_1100:
             ; else, keep going to parse AND
 
             GET_BITS #8, #6
-            CMP.B    #%00000111, D4
+            CMP.B    #%111, D4
             BEQ      OPC_MULS
             BNE      OPC_AND
 
@@ -1292,9 +1347,6 @@ OPC_MULS:  * MULS opcode subroutine
             INSERT_SPACE
 
             MOVE.B   #1, opSize
-            
-            MOVE.B  #%10111111, valid   * set the valid mode bits (to be used later)
-            
             JMP     EA_TO_D
 *-----------------------------------------------------------
 
@@ -1318,72 +1370,97 @@ OPC_1101:
 * (LSL, LSR, ASL, ASR)
 *-----------------------------------------------------------
 OPC_1110:
-            MOVE.B  #%00111110, valid ; valid bits are the same for all shifts
-            
-            ; check for LSL/LSR vs ASL/ASR
-            GET_BITS #4,#3
-            CMP.B   #0,D4
-            BEQ     A_SHIFT     ; if bits 4-3 are 00, ASL/ASR
-            BRA     L_SHIFT     ; if bits 4-3 are 01, LSL/LSR
+            GET_BITS #7, #6
+            CMP.B    #%11, D4
+            BEQ      SHIFT_MEMORY
+            BRA      SHIFT_REGISTER
 
-;======================================================
-; getting the opcode name
+SHIFT_MEMORY:
+            BSR      CHECK_MEM_TYPE
+            CMP.B    #1, D3
+            BEQ      BAD_OPCODE
+            JMP      SHIFT_MEM_MODE
+            
+
+SHIFT_REGISTER:
+            BSR      CHECK_REG_TYPE
+            CMP.B    #1, D3
+            BEQ      BAD_OPCODE
+            JMP      SHIFT_REG_OR_IMM
+
+*-----------------------------------------------------------
+CHECK_REG_TYPE:
+            ; check for LSL/LSR vs ASL/ASR
+            GET_BITS  #4, #3
+            CMP.B     #0, D4
+            BEQ       A_SHIFT     ; if bits 4-3 are 00, ASL/ASR
+            CMP.B     #1, D4
+            BEQ       L_SHIFT     ; if bits 4-3 are 01, LSL/LSR
+            
+            MOVE.B    #1, D3
+            RTS
+
+CHECK_MEM_TYPE:
+            GET_BITS #10, #9
+            CMP.B    #0, D4
+            BEQ      A_SHIFT
+            CMP.B    #1, D4
+            BEQ      L_SHIFT
+
+            MOVE.B   #1, D3
+            RTS
+*--------------------get opcode name------------------------
 A_SHIFT:
-            MOVE.B  #'A',(A1)+
-            MOVE.B  #'S',(A1)+ 
-            GET_BITS #8,#8      ; check for shifting left or right
-            CMP.B   #01,D4
-            BEQ     L_TO_BUFF
-            BRA     R_TO_BUFF
-            
+            MOVE.B   #'A', (A1)+
+            MOVE.B   #'S', (A1)+ 
+            BRA      CHECK_DIRECTION
+
 L_SHIFT:
-            MOVE.B  #'L',(A1)+
-            MOVE.B  #'S',(A1)+
-            GET_BITS #8,#8      ; check for shifting left or right
-            CMP.B   #01,D4
-            BEQ     L_TO_BUFF
-            BRA     R_TO_BUFF
+            MOVE.B   #'L', (A1)+
+            MOVE.B   #'S', (A1)+
+            BRA      CHECK_DIRECTION
+
+*------------------determine which way to shift---------------
+CHECK_DIRECTION:
+            GET_BITS #8, #8      ; check for shifting left or right
+            CMP.B    #1, D4
+            BEQ      L_TO_BUFF
+            CMP.B    #0, D4
+            BEQ      R_TO_BUFF
             
+            MOVE.B   #1, D3
+            RTS
             
 L_TO_BUFF:
             MOVE.B  #'L',(A1)+
             MOVE.B  #'.',(A1)+
-            
-            BRA     SHIFT_MODES
-
+            RTS
 
 R_TO_BUFF:
             MOVE.B  #'R',(A1)+
             MOVE.B  #'.',(A1)+
+            RTS
 
-            BRA     SHIFT_MODES
-
-
-;======================================================
-; determining which mode to use
-SHIFT_MODES:
-            GET_BITS #7,#6
-            CMP.B   #3,D4
-            BNE     SHIFT_REG_OR_IMM    ; jump to register/immediate mode if the bits aren't #%11
-            BRA     SHIFT_MEM_MODE      ; otherwise, jump to memory mode if the bits are #%11
-
-
+*-----------------------------------------------------------
 SHIFT_REG_OR_IMM: ; register and immediate shifts
-            
             ; get the size
+            GET_BITS       #7, #6
             SIZE_TO_BUFFER D4
-            
             
             ; get the i/r bit to determine immediate/register
             GET_BITS #5,#5
-            ; if i/r is 0, it's an immediate shift
-            ; if i/r is 1, it's a register shift
-            CMP.B   #0,D4
-            BEQ     SHIFT_IMMEDIATE_MODE
-            BRA     SHIFT_REGISTER_MODE
-            
 
-;======================================================
+            ; if i/r is 0, it's an immediate shift
+            CMP.B   #0, D4
+            BEQ     SHIFT_IMMEDIATE_MODE
+            ; if i/r is 1, it's a register shift
+            CMP.B   #1, D4
+            BEQ     SHIFT_REGISTER_MODE
+
+            ; else, bad opcode
+            JMP     BAD_OPCODE
+
+*-----------------------------------------------------------
 ; shifting modes (immediate data, from a register, from memory)
 SHIFT_IMMEDIATE_MODE:
             MOVE.B  #'#',(A1)+
@@ -1396,13 +1473,12 @@ SHIFT_IMMEDIATE_MODE:
             BRA     SHIFT_DEST_REG   ; get the destination register
 
 SHIFT_COUNT: ; moves the size to the buffer
-            GET_BITS #11,#9
+            GET_BITS   #11,#9
             
-            CMP.B   #0,D4   ; shift bits = 0, shifting 8 bits
-            BEQ     EIGHT_TO_BUFF
+            CMP.B      #0, D4   ; shift bits = 0, shifting 8 bits
+            BEQ        EIGHT_TO_BUFF
             
-            ADD.B   #$30,D4
-            MOVE.B  D4,(A1)+
+            VALUE_TO_BUFFER  D4
             RTS
             
 EIGHT_TO_BUFF:
@@ -1423,23 +1499,37 @@ SHIFT_REGISTER_MODE:
             BRA     SHIFT_DEST_REG   ; get the destination register
 
 SHIFT_DEST_REG:
-            MOVE.B  #'D',(A1)+
-            GET_BITS #2,#0
-            ; add 30 to the register bits
-            ADD.B   #$30,D4
-            MOVE.B  D4,(A1)+
-            
-            MOVE.B  #0,(A1)+        ; add the null terminator
+            MOVE.B          #'D', (A1)+
+            GET_BITS        #2, #0
+            VALUE_TO_BUFFER D4
             
             BRA     IDENTIFY_OPCODE
             
             
 SHIFT_MEM_MODE: ; memory shifts
-            MOVE.B  #'W',(A1)+      ; always word sized
-            MOVE.B  #' ',(A1)+
+            MOVE.B  #'W', (A1)+      ; always word sized
+            MOVE.B  #' ', (A1)+
             
             DECODE_EA #5, #0
-            BRA     IDENTIFY_OPCODE
+            BRA           IDENTIFY_OPCODE
+*-----------------------------------------------------------
+
+*-----------------------opc_1111----------------------------
+* First four bits = 1111
+* (SIMAULT)
+*-----------------------------------------------------------
+OPC_1111:
+            CMP.W  #$FFFF, opcode
+            BEQ    DONE
+            BRA    BAD_OPCODE
+*-----------------------------------------------------------
+
+
+
+
+
+
+
 
 
 *--------------Process Register->Opmode->EA-----------------
@@ -1486,6 +1576,7 @@ GET_DATA_REG_NUM:
 
             * store in appropriate register
             MOVE.B            #'D',(A1)+                  * add "D" to buffer
+            CHECK_REGISTER    D4
             VALUE_TO_BUFFER   D4          
             RTS
 *-----------------------------------------------------------
@@ -1555,6 +1646,8 @@ MOVEM_SIZE_DONE:
 MOVEM_BR:
             * move dr of operation to D5
             GET_BITS  #10, #10
+            CMP.B     #2, D4
+            BGE       BAD_OPCODE
             RTS
 *-----------------------------------------------------------
 MOVEM_MODE:
@@ -1717,7 +1810,8 @@ NO_MORE_BITS:
 *   D1 = amount to shift the opcode
 *   D2 = destination for shifts
 *-----------------------------------------------------------
-EA_TO_BUFFER:                            
+EA_TO_BUFFER:              
+            CHECK_REGISTER  ea_register              
             CMP.B   #%0000, ea_mode        * Direct Data Register
             BEQ     EA_000
 
@@ -1742,7 +1836,7 @@ EA_TO_BUFFER:
             CMP.B   #%0111, ea_mode        * Absolute or immediate address
             BEQ     EA_111
 
-            BRA    INVALID_EA
+            BRA     BAD_OPCODE
 
 *----------------------------Direct Data Register------------------------
 EA_000:
@@ -1789,15 +1883,14 @@ EA_100:
 
 *----------------------------Not necessary, go to bad EA------------------------
 EA_101:
-            BRA         INVALID_EA        
+            BRA         BAD_OPCODE        
 
 *----------------------------Not necessary, go to bad EA------------------------
 EA_110:
-            BRA         INVALID_EA        
+            BRA         BAD_OPCODE        
 
 *----------------------------Absolute or immediate address------------------------
 EA_111:
-
             CMP.B       #%000, ea_register                  * compare to determine if it's a word
             BEQ         EA_WORD                             * put word address in buffer
 
@@ -1808,7 +1901,7 @@ EA_111:
             BEQ         EA_IMMEDIATE                        * always print a long if it's immediate data
 
             * Invalid EA mode/register
-            BRA         INVALID_EA
+            BRA         BAD_OPCODE
 
 EA_WORD:
             MOVE.B      #'$', (A1)+
@@ -1840,10 +1933,6 @@ EA_IMMEDIATE:
 
 GET_EA_DONE:
             RTS
-
-*------------------Invalid Effective Address----------------
-INVALID_EA:
-            JMP      DONE
 *-----------------------------------------------------------
 
 
@@ -1916,7 +2005,7 @@ NUMBER_OR_LETTER:
             CMP.B    #$39, D3           * is byte in D2 a letter?
             BGE      LETTER_TO_ASCII
 
-            BRA      INVALID_EA
+            BRA      BAD_OPCODE
 
 NUMBER_TO_ASCII:
             ADD.B    #$30, D2           * Get the hex range from '0-9'
@@ -1989,6 +2078,7 @@ STB_END:
 
 *-------------------------DONE-------------------------------
 DONE:
+            CLR.L     D0
             CLR_A_REG D0, A1
 
             * add 'SIMHAULT' to buffer
@@ -2023,6 +2113,8 @@ DONE:
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
+
+
 
 
 
