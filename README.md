@@ -1,13 +1,5 @@
 # Disassembler or DASM FOR SHORT
 
-## TODO List for this week:
-<p>
-Zach:    N/A 
-  
-Brendan: Print DATA for invalid words
-
-Lucas:   Writing to File   
-</p>
 ## Updates:
 <p>
 MOVEM and MOVEQ are done and should be working.
@@ -45,8 +37,3 @@ Current Supported Opcodes
   <li> LEA </li>
 </ul>
 
-Opcdoes that will be supported in the future:
-<ul>
-  <li> 
- </ul>
-</p>
