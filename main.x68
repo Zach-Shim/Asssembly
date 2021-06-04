@@ -14,17 +14,31 @@
 CR          EQU     $0D             ; Define Carriage Return and Line Feed
 LF          EQU     $0A 
 
-rule1:      DC.B    '1. Addresses must be in the range $FFFFFF > x > $6FFF', CR, LF, 0 ' 
-rule1c:     DC.B    'where x is your given address.', CR, LF, 0 '
-rule2:      DC.B    '2. If you use any letters (A-F), make sure they are upper case.', CR, LF, 0
-rule3:      DC.B    '3. If you use constants (DC), make sure you give addresses that', CR, LF, 0 
-rule3c:     DC.B    'do not include that part of memory (only want to parse instructions).', CR, LF, 0
+intro:      DC.B    '************************************************************************', CR, LF
+            DC.B    '                    _____    _______    _____ ', CR, LF
+            DC.B    '                   |  __ \  |__   __|  / ____|', CR, LF
+            DC.B    '                   | |__) |    | |    | (___  ', CR, LF
+            DC.B    '                   |  _  /     | |     \___ \ ', CR, LF
+            DC.B    '                   | | \ \     | |     ____) |', CR, LF
+            DC.B    '                   |_|  \_\    |_|    |_____/ ', CR, LF
+            DC.B    '                                ', CR, LF
+            DC.B    '************************************************************************',CR, LF, CR, LF, 0
+
+teamName:   DC.B    'Team RTS Disassembler', CR, LF, 0
+rules:      DC.B    'Rules For Input:', CR, LF
+            DC.B    '1. Addresses must be in the range $999 > x > $100 or $FFFFFF > x > $6FFF', CR, LF
+            DC.B    '   where x is your given address.', CR, LF
+            DC.B    '2. If you use any letters (A-F), make sure they are upper case.', CR, LF
+            DC.B    '3. If you use constants (DC), make sure you give a start address that', CR, LF
+            DC.B    '   does not include that part of memory (only want to parse instructions).', CR, LF, CR, LF, 0
+
 startMsg:   DC.B    'Please enter a starting address. ', CR, LF, 0
 endMsg:     DC.B    'Please enter an ending address. ', CR, LF, 0
-doneMsg:    DC.B    'Disassembly complete, saved to file "dasmOutput.txt."', CR, LF, 0
+
+doneMsg:    DC.B    'Disassembly complete, saved to file "TestDisAsm.txt"', CR, LF, 0
 badInput:   DC.B    'Invalid Input', CR, LF, 0
 newline:    DC.B    '', CR, LF, 0
-fileName    DC.B     'dasmOutput.txt',0
+fileName:   DC.B    'TestDisAsm.txt',0
 
 printAddrEnd     DS.L    0
 printAddrStart   DS.L    0
@@ -305,11 +319,9 @@ MAIN:
             
             CLR.L  D0
             
-            PRINT_MSG    rule1
-            PRINT_MSG    rule1c
-            PRINT_MSG    rule2
-            PRINT_MSG    rule3
-            PRINT_MSG    rule3c
+            PRINT_MSG    teamName
+            PRINT_MSG    intro
+            PRINT_MSG    rules
             BSR          GET_INPUT
             BRA          LOAD_ADDRESSES
 *-----------------------------------------------------------
@@ -529,23 +541,6 @@ PRINT_ADDRESS:
             
             * move current address to D2
             MOVE.L    A2, D2
-           
-            * if absolute short, print word. Range $0000 - $7FFF and $FFFF8000 - $FFFFFFFF
-            MOVE.L    #$8000, D1
-            CMP.L     D1, D2
-            BLT       PRINT_WORD
-            
-            * if absolute long, print long. Range $8000 - $FFFF7FFF
-            MOVE.L    #$FFFF8000, D1
-            CMP.L     D1, D2
-            BGE       PRINT_LONG                 
-
-PRINT_WORD:
-            MOVE.B    #1, D1            * passing 1 means we are passing word as a parameter to HEX_TO_ASCII
-            MOVE.W    A2, D7            * passing current parsing position means we are passing an address as a parameter in D7 to HEX_TO_ASCII
-            BRA       FINISH_PRINT
-
-PRINT_LONG:
             MOVE.B    #3, D1            * passing 1 means we are passing long as a parameter to HEX_TO_ASCII
             MOVE.L    A2, D7
             BRA       FINISH_PRINT
@@ -779,10 +774,6 @@ BAD_OPCODE:
             CLR_D_REGS
             CLR_A_REG  D0, A1
 
-            INSERT_SPACE
-            MOVE.B   #'B', (A1)+
-            MOVE.B   #'A', (A1)+
-            MOVE.B   #'D', (A1)+
             INSERT_SPACE
             MOVE.B   #'D', (A1)+
             MOVE.B   #'A', (A1)+
@@ -2113,18 +2104,3 @@ DONE:
 
             END       MAIN              ; last line of source
 *-----------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-*~Font name~Courier New~
-*~Font size~12~
-*~Tab type~0~
-*~Tab size~4~
